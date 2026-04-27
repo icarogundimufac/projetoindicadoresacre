@@ -2,13 +2,21 @@ import { useEffect, useMemo, useState } from 'react'
 import { Header } from '@/components/layout/Header'
 import { PageShell, PageContent } from '@/components/layout/PageShell'
 import { SectionSummary } from '@/components/dashboard/SectionSummary'
-import { AcreMap } from '@/components/maps/AcreMap'
+import { KpiLedgerRow } from '@/components/dashboard/KpiLedgerRow'
+import {
+  AcreMap,
+  MAP_COLOR_PALETTES,
+  MAP_COLOR_SCALE_LABELS,
+  type MapColorScale,
+} from '@/components/maps/AcreMap'
 import {
   DEFAULT_MAP_VARIABLE_KEY,
   getMapVariableData,
 } from '@/lib/data/portal-data'
+import { SECTIONS } from '@/lib/constants/sections'
+import { isIndicatorSectionId } from '@/lib/constants/indicator-sections'
 import type { PortalDataBundle, MapVariableOption } from '@/types/admin-data'
-import type { DashboardData, KpiData } from '@/types/dashboard'
+import type { DashboardData } from '@/types/dashboard'
 
 interface DashboardPageProps {
   data: DashboardData | null
@@ -16,58 +24,30 @@ interface DashboardPageProps {
   variableOptions: MapVariableOption[]
 }
 
-const SECTION_COLOR: Record<string, string> = {
-  educacao: '#3b82f6',
-  saude: '#10b981',
-  seguranca: '#f97316',
-  orcamento: '#f59e0b',
-  municipios: '#8b5cf6',
-  default: '#229157',
-}
+const MAP_COLOR_SCALE_STORAGE_KEY = 'portal:dashboard:mapColorScale'
+const MAP_COLOR_SCALES = Object.keys(MAP_COLOR_PALETTES) as MapColorScale[]
 
-function KpiSidebarItem({ kpi }: { kpi: KpiData }) {
-  const color = SECTION_COLOR[kpi.section] ?? SECTION_COLOR.default
-  const isUp = kpi.deltaDirection === 'up'
-  const isDown = kpi.deltaDirection === 'down'
-
-  return (
-    <div className="flex items-center justify-between gap-3 py-3 px-4 border-b border-areia-100 last:border-0">
-      <div className="flex items-center gap-2.5 min-w-0">
-        <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: color }} />
-        <span className="text-xs text-areia-600 font-jakarta leading-tight truncate">
-          {kpi.label}
-        </span>
-      </div>
-      <div className="flex items-center gap-1.5 flex-shrink-0">
-        <span className="text-sm font-bold text-[#1F6B3A] font-fraunces tabular-nums">
-          {typeof kpi.value === 'number'
-            ? kpi.value.toLocaleString('pt-BR')
-            : kpi.value}
-        </span>
-        {kpi.unit && (
-          <span className="text-[10px] text-areia-400 font-jakarta">{kpi.unit}</span>
-        )}
-        {kpi.delta !== undefined && (
-          <span
-            className={`text-[10px] font-semibold font-jakarta ${
-              isUp
-                ? 'text-verde-600'
-                : isDown
-                  ? 'text-estrela-500'
-                  : 'text-areia-400'
-            }`}
-          >
-            {isUp ? '▲' : isDown ? '▼' : '—'}
-          </span>
-        )}
-      </div>
-    </div>
-  )
+function readPersistedColorScale(): MapColorScale {
+  try {
+    const value = localStorage.getItem(MAP_COLOR_SCALE_STORAGE_KEY)
+    if (value && (MAP_COLOR_SCALES as string[]).includes(value)) {
+      return value as MapColorScale
+    }
+  } catch {}
+  return 'verde'
 }
 
 export function DashboardPage({ data, bundle, variableOptions }: DashboardPageProps) {
   const [selectedVariableKey, setSelectedVariableKey] = useState(DEFAULT_MAP_VARIABLE_KEY)
   const [selectedYear, setSelectedYear] = useState(2023)
+  const [colorScale, setColorScale] = useState<MapColorScale>(readPersistedColorScale)
+
+  const handleColorScaleChange = (scale: MapColorScale) => {
+    setColorScale(scale)
+    try {
+      localStorage.setItem(MAP_COLOR_SCALE_STORAGE_KEY, scale)
+    } catch {}
+  }
 
   const selectedVariable = variableOptions.find(
     (option) => option.key === selectedVariableKey,
@@ -104,12 +84,20 @@ export function DashboardPage({ data, bundle, variableOptions }: DashboardPagePr
     [bundle, selectedVariableKey, selectedYear],
   )
 
-  const colorScale =
-    selectedVariable?.sectionId === 'saude'
-      ? 'heat'
-      : selectedVariable?.sectionId === 'seguranca'
-        ? 'estrela'
-        : 'verde'
+  const indicatorCounts = useMemo(() => {
+    const counts: Record<string, number> = {}
+    if (!bundle) return counts
+    for (const section of SECTIONS) {
+      if (!isIndicatorSectionId(section.id)) continue
+      const indicatorSection = bundle.sections[section.id]
+      if (!indicatorSection) continue
+      counts[section.id] = indicatorSection.groups.reduce(
+        (acc, group) => acc + group.indicators.length,
+        0,
+      )
+    }
+    return counts
+  }, [bundle])
 
   // Group variable options by section for <optgroup>
   const optionsBySection = useMemo(() => {
@@ -128,13 +116,12 @@ export function DashboardPage({ data, bundle, variableOptions }: DashboardPagePr
       <Header
         title="Dashboard"
         subtitle="Visão geral dos principais indicadores do Estado do Acre"
-        badge="SEPLAN/AC"
       />
 
       <PageContent>
         <section className="mb-8">
-          <div className="flex gap-5 items-stretch">
-            <div className="flex-[2] min-w-0 bg-white rounded-xl border border-areia-200 shadow-sm overflow-hidden">
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-start">
+            <div className="xl:flex-[2] min-w-0 bg-white rounded-xl border border-areia-200 shadow-sm overflow-hidden dark:bg-[#4a5546] dark:border-white/12">
               <div className="px-5 py-3 border-b border-areia-100 flex items-center justify-between gap-3">
                 <p className="text-sm font-semibold text-areia-800 font-jakarta shrink-0">
                   Mapa do Estado do Acre
@@ -169,6 +156,21 @@ export function DashboardPage({ data, bundle, variableOptions }: DashboardPagePr
                     ))}
                   </select>
 
+                  <select
+                    value={colorScale}
+                    onChange={(event) =>
+                      handleColorScaleChange(event.currentTarget.value as MapColorScale)
+                    }
+                    aria-label="Paleta de cores do mapa"
+                    className="rounded-lg border border-areia-200 bg-areia-50/60 px-2.5 py-1 text-[12px] text-areia-700 font-jakarta transition hover:border-areia-300 focus:border-verde-400 focus:ring-1 focus:ring-verde-400/30 focus:outline-none"
+                  >
+                    {MAP_COLOR_SCALES.map((scale) => (
+                      <option key={scale} value={scale}>
+                        {MAP_COLOR_SCALE_LABELS[scale]}
+                      </option>
+                    ))}
+                  </select>
+
                   {selectedVariable && (
                     <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border border-[#F2C230]/40 bg-[#F2C230]/10 text-[#1F6B3A] font-jakarta shrink-0 whitespace-nowrap">
                       Fonte: {selectedVariable.source}
@@ -186,34 +188,57 @@ export function DashboardPage({ data, bundle, variableOptions }: DashboardPagePr
             </div>
 
             {data?.kpis && data.kpis.length > 0 && (
-              <div className="flex-[1] min-w-0 bg-white rounded-xl border border-areia-200 shadow-sm overflow-hidden flex flex-col">
-                <div className="px-4 py-3 border-b border-areia-100">
-                  <p className="text-xs font-bold uppercase tracking-widest text-areia-400 font-jakarta">
-                    Indicadores-chave
+              <div className="xl:flex-[1] min-w-0 rounded-xl border border-areia-200 bg-white shadow-sm overflow-hidden xl:sticky xl:top-6 dark:bg-[#4a5546] dark:border-white/12">
+                <div className="h-1 bg-gradient-to-r from-ouro-400 via-ouro-300 to-ouro-400" />
+                <div className="border-b border-areia-200 px-4 py-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-verde-700 font-jakarta">
+                      Indicadores-chave
+                    </p>
+                    <span className="rounded-md border border-verde-100 bg-verde-50 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.1em] text-verde-700 font-jakarta">
+                      {data.kpis.length} itens
+                    </span>
+                  </div>
+                  <p className="mt-1 text-[11px] text-areia-500 font-jakarta">
+                    Principais metricas para leitura rapida.
                   </p>
                 </div>
-                <div className="flex-1 overflow-y-auto">
-                  {data.kpis.map((kpi) => (
-                    <KpiSidebarItem key={kpi.id} kpi={kpi} />
-                  ))}
+
+                <div className="px-3 py-3">
+                  <ul className="space-y-2">
+                    {data.kpis.map((kpi) => (
+                      <KpiLedgerRow
+                        key={kpi.id}
+                        kpi={kpi}
+                      />
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="border-t border-areia-200 px-4 py-2 bg-areia-50/50">
+                  <p className="text-[9px] text-areia-400 font-jakarta tracking-wide">
+                    {data.lastUpdated && `Atualizado em ${new Date(data.lastUpdated).toLocaleDateString('pt-BR')}`}
+                  </p>
                 </div>
               </div>
             )}
           </div>
         </section>
 
-        {data?.sectionSummaries && data.sectionSummaries.length > 0 && (
-          <section>
-            <h2 className="text-xs font-bold uppercase tracking-widest text-areia-400 font-jakarta mb-4">
-              Áreas temáticas
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-              {data.sectionSummaries.map((summary) => (
-                <SectionSummary key={summary.section} summary={summary} />
-              ))}
-            </div>
-          </section>
-        )}
+        <section>
+          <h2 className="text-xs font-bold uppercase tracking-widest text-verde-700 font-jakarta mb-4">
+            Áreas temáticas
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+            {SECTIONS.map((section) => (
+              <SectionSummary
+                key={section.id}
+                sectionId={section.id}
+                indicatorCount={indicatorCounts[section.id]}
+              />
+            ))}
+          </div>
+        </section>
 
         {!data && (
           <div className="flex flex-col items-center justify-center py-24 text-center">

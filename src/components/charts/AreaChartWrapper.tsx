@@ -1,5 +1,4 @@
-'use client'
-
+import React from 'react'
 import {
   Area,
   AreaChart,
@@ -50,16 +49,18 @@ function TooltipCard({
   if (!datum) return null
 
   return (
-    <div className="bg-verde-900 text-white rounded-lg px-3 py-2 shadow-xl text-xs font-jakarta">
-      <p className="font-semibold text-areia-200 mb-0.5">{datum.year}</p>
-      <p className="text-white tabular-nums font-semibold">
+    <div className="rounded-xl border border-areia-200 bg-white px-3 py-2 shadow-xl text-xs font-jakarta">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-areia-400 mb-1">
+        {datum.year}
+      </p>
+      <p className="tabular-nums font-semibold text-verde-900">
         {applyFormat(datum.value, format, unit)}
       </p>
     </div>
   )
 }
 
-export function AreaChartWrapper({
+function AreaChartWrapperInternal({
   data,
   color = '#229157',
   unit = '',
@@ -72,7 +73,7 @@ export function AreaChartWrapper({
   const gradientId = `area-gradient-${color.replace('#', '')}`
 
   return (
-    <div style={{ height }}>
+    <div style={{ height, minHeight: height }}>
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data} margin={{ top: 16, right: 20, bottom: 20, left: 40 }}>
           <defs>
@@ -81,7 +82,7 @@ export function AreaChartWrapper({
               <stop offset="95%" stopColor={color} stopOpacity={0.02} />
             </linearGradient>
           </defs>
-          <CartesianGrid stroke="#e8e6dc" strokeDasharray="3 3" vertical={false} />
+          <CartesianGrid stroke="#f0ede6" strokeDasharray="3 3" vertical={false} />
           <XAxis
             dataKey="year"
             tick={{ fill: '#8c8472', fontSize: 11, fontFamily: 'var(--font-jakarta)' }}
@@ -98,7 +99,7 @@ export function AreaChartWrapper({
             width={68}
           />
           <Tooltip
-            cursor={{ stroke: '#d7d1c3', strokeDasharray: '4 4' }}
+            cursor={{ stroke: '#e5e1d6', strokeDasharray: '4 4' }}
             content={<TooltipCard format={format} unit={unit} />}
           />
           <Area
@@ -113,3 +114,5 @@ export function AreaChartWrapper({
     </div>
   )
 }
+
+export const AreaChartWrapper = React.memo(AreaChartWrapperInternal)

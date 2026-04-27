@@ -12,7 +12,7 @@ export const SECTIONS: SectionMeta[] = [
   {
     id: 'educacao',
     label: 'Educação',
-    href: '/educacao',
+    href: '/indicadores?secao=educacao',
     description: 'Matrículas, IDEB, alfabetização e infraestrutura escolar',
     color: 'text-blue-700',
     bgColor: 'bg-blue-50',
@@ -21,7 +21,7 @@ export const SECTIONS: SectionMeta[] = [
   {
     id: 'saude',
     label: 'Saúde',
-    href: '/saude',
+    href: '/indicadores?secao=saude',
     description: 'Mortalidade, cobertura vacinal, leitos e profissionais de saúde',
     color: 'text-emerald-700',
     bgColor: 'bg-emerald-50',
@@ -30,7 +30,7 @@ export const SECTIONS: SectionMeta[] = [
   {
     id: 'seguranca',
     label: 'Segurança',
-    href: '/seguranca',
+    href: '/indicadores?secao=seguranca',
     description: 'Homicídios, roubos, furtos e ocorrências policiais',
     color: 'text-orange-700',
     bgColor: 'bg-orange-50',
@@ -39,7 +39,7 @@ export const SECTIONS: SectionMeta[] = [
   {
     id: 'orcamento',
     label: 'Orçamento',
-    href: '/orcamento',
+    href: '/indicadores?secao=orcamento',
     description: 'Receitas, despesas, investimentos e transferências',
     color: 'text-amber-700',
     bgColor: 'bg-amber-50',

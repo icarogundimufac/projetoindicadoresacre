@@ -1,12 +1,25 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Roboto:wght@400;500;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --font-fraunces: 'Fraunces', Georgia, serif;
+  --font-fraunces: Helvetica, Arial, sans-serif;
   --font-jakarta: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-roboto: 'Roboto', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --seplan-night-bg: #2a3028;
+  --seplan-night-bg-soft: #151914;
+  --seplan-night-surface: #1a2018;
+  --seplan-night-surface-raised: #222b20;
+  --seplan-night-border: rgba(242, 194, 48, 0.18);
+  --seplan-night-border-muted: rgba(245, 244, 239, 0.11);
+  --seplan-night-text: #f5f4ef;
+  --seplan-night-muted: #c9c1ae;
+  --seplan-night-subtle: #9b9484;
+  --seplan-night-green: #8ad7a7;
+  --seplan-night-gold: #f2c230;
 }
 
 * {
@@ -23,6 +36,202 @@ body {
   color: #514b40;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+html[data-theme='light'] body {
+  background-color: #f5f4ef;
+  color: #514b40;
+}
+
+html[data-theme='light'] .bg-white,
+html[data-theme='light'] .bg-white\/95 {
+  background-color: rgba(255, 255, 255, 0.95);
+}
+
+html[data-theme='light'] .bg-white {
+  background-color: #ffffff;
+}
+
+html[data-theme='light'] .bg-areia-50,
+html[data-theme='light'] .bg-areia-50\/30,
+html[data-theme='light'] .bg-areia-50\/40,
+html[data-theme='light'] .bg-areia-50\/50,
+html[data-theme='light'] .bg-areia-50\/60,
+html[data-theme='light'] .bg-areia-50\/70 {
+  background-color: #fafaf7;
+}
+
+html[data-theme='light'] .bg-areia-100,
+html[data-theme='light'] .bg-areia-100\/40,
+html[data-theme='light'] .bg-areia-100\/60,
+html[data-theme='light'] .bg-areia-100\/80 {
+  background-color: #f5f4ef;
+}
+
+html[data-theme='light'] .border-areia-100 {
+  border-color: #f5f4ef;
+}
+
+html[data-theme='light'] .border-areia-200 {
+  border-color: #e8e6dc;
+}
+
+html[data-theme='light'] .border-areia-300 {
+  border-color: #d4d0c4;
+}
+
+html[data-theme='light'] .text-verde-950 {
+  color: #041a10;
+}
+
+html[data-theme='light'] .text-verde-900 {
+  color: #072d1c;
+}
+
+html[data-theme='light'] .text-verde-800 {
+  color: #0a4028;
+}
+
+html[data-theme='light'] .text-verde-700 {
+  color: #0f5b36;
+}
+
+html[data-theme='light'] .text-areia-800 {
+  color: #38342c;
+}
+
+html[data-theme='light'] .text-areia-700 {
+  color: #514b40;
+}
+
+html[data-theme='light'] .text-areia-600 {
+  color: #6b6355;
+}
+
+html[data-theme='light'] .text-areia-500 {
+  color: #8c8472;
+}
+
+html[data-theme='light'] .text-areia-400 {
+  color: #b0aa98;
+}
+
+.dark body {
+  background-color: var(--seplan-night-bg);
+  color: var(--seplan-night-text);
+}
+
+.dark .bg-white,
+.dark .bg-white\/95 {
+  background-color: var(--seplan-night-surface);
+}
+
+.dark .bg-white\/92 {
+  background-color: rgba(245, 244, 239, 0.92);
+}
+
+.dark .bg-areia-50,
+.dark .bg-areia-50\/30,
+.dark .bg-areia-50\/40,
+.dark .bg-areia-50\/50,
+.dark .bg-areia-50\/60,
+.dark .bg-areia-50\/70,
+.dark .bg-areia-100,
+.dark .bg-areia-100\/40,
+.dark .bg-areia-100\/60,
+.dark .bg-areia-100\/80 {
+  background-color: var(--seplan-night-bg-soft);
+}
+
+.dark .bg-areia-200 {
+  background-color: rgba(245, 244, 239, 0.09);
+}
+
+.dark .bg-verde-50,
+.dark .bg-verde-100 {
+  background-color: rgba(34, 145, 87, 0.12);
+}
+
+.dark .border-areia-100,
+.dark .border-verde-100,
+.dark .border-verde-200,
+.dark .border-white\/10,
+.dark .border-white\/80,
+.dark .border-black\/10,
+.dark .border-areia-200,
+.dark .border-areia-300 {
+  border-color: var(--seplan-night-border-muted);
+}
+
+.dark .border-\[\#F2C230\]\/40 {
+  border-color: rgba(242, 194, 48, 0.45);
+}
+
+.dark .text-verde-950,
+.dark .text-verde-900,
+.dark .text-verde-800 {
+  color: #d6f3e1;
+}
+
+.dark .text-verde-700,
+.dark .text-verde-600 {
+  color: var(--seplan-night-green);
+}
+
+.dark .text-areia-900,
+.dark .text-areia-800,
+.dark .text-areia-700 {
+  color: var(--seplan-night-text);
+}
+
+.dark .text-areia-600,
+.dark .text-areia-500 {
+  color: var(--seplan-night-muted);
+}
+
+.dark .text-areia-400 {
+  color: var(--seplan-night-subtle);
+}
+
+.dark .text-\[\#1F6B3A\] {
+  color: var(--seplan-night-gold);
+}
+
+.dark .shadow-sm,
+.dark .shadow-md,
+.dark .shadow-xl,
+.dark .shadow-2xl {
+  --tw-shadow-color: rgba(0, 0, 0, 0.32);
+}
+
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: rgba(16, 19, 15, 0.88);
+  border-color: var(--seplan-night-border-muted);
+  color: var(--seplan-night-text);
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: var(--seplan-night-subtle);
+}
+
+.dark table,
+.dark thead,
+.dark tbody,
+.dark tr {
+  border-color: var(--seplan-night-border-muted);
+}
+
+.dark .recharts-cartesian-grid line {
+  stroke: rgba(245, 244, 239, 0.1);
+}
+
+.dark .recharts-text,
+.dark .recharts-legend-item-text {
+  fill: var(--seplan-night-muted);
+  color: var(--seplan-night-muted) !important;
 }
 
 .leaflet-container {

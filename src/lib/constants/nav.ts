@@ -19,10 +19,7 @@ export const NAV: NavSection[] = [
   {
     label: 'Indicadores',
     items: [
-      { label: 'Educação', href: '/educacao', icon: 'book-open' },
-      { label: 'Saúde', href: '/saude', icon: 'heart-pulse' },
-      { label: 'Segurança', href: '/seguranca', icon: 'shield' },
-      { label: 'Orçamento', href: '/orcamento', icon: 'coins' },
+      { label: 'Indicadores', href: '/indicadores', icon: 'bar-chart' },
     ],
   },
   {

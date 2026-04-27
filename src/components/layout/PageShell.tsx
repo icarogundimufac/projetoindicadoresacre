@@ -7,7 +7,7 @@ interface PageShellProps {
 
 export function PageShell({ children, className }: PageShellProps) {
   return (
-    <div className={cn('min-h-screen bg-areia-100', className)}>
+    <div className={cn('min-h-screen bg-areia-100 dark:bg-[var(--seplan-night-bg)]', className)}>
       {children}
     </div>
   )

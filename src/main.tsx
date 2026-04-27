@@ -4,6 +4,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from '@/App'
 import '@/app/globals.css'
 
+if (import.meta.env.DEV) {
+  import('react-grab')
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

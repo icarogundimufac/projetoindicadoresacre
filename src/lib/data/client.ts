@@ -189,16 +189,15 @@ export function prefetchPathData(queryClient: QueryClient, href: string) {
           queryFn: () => portalDataClient.getSection('educacao'),
         }),
       ])
-    case '/educacao':
-    case '/saude':
-    case '/seguranca':
-    case '/orcamento': {
-      const sectionId = href.slice(1) as IndicatorSectionId
-      return queryClient.prefetchQuery({
-        queryKey: queryKeys.section(sectionId),
-        queryFn: () => portalDataClient.getSection(sectionId),
-      })
-    }
+    case '/indicadores':
+      return Promise.all(
+        INDICATOR_SECTION_IDS.map((sectionId) =>
+          queryClient.prefetchQuery({
+            queryKey: queryKeys.section(sectionId),
+            queryFn: () => portalDataClient.getSection(sectionId),
+          }),
+        ),
+      )
     case '/mapas':
       return Promise.all([
         ...INDICATOR_SECTION_IDS.map((sectionId) =>

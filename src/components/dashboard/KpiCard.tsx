@@ -25,7 +25,7 @@ export function KpiCard({ kpi, className }: KpiCardProps) {
   return (
     <div
       className={cn(
-        'bg-white rounded-xl border border-areia-200 shadow-sm pt-0 overflow-hidden',
+        'bg-white rounded-xl border border-areia-200 shadow-sm pt-0 overflow-hidden dark:bg-[#4a5546] dark:border-white/12',
         'transition-shadow duration-200 hover:shadow-md',
         'animate-slide-up',
         className,
@@ -37,7 +37,7 @@ export function KpiCard({ kpi, className }: KpiCardProps) {
       <div className="p-5">
         <div className="flex items-start justify-between gap-2 mb-3">
           <SectionTag section={kpi.section} />
-          <span className="text-[11px] text-areia-400 font-jakarta">{kpi.year}</span>
+          <span className="text-[11px] text-areia-500 font-jakarta">{kpi.year}</span>
         </div>
 
         <p className="text-xs font-medium text-areia-500 font-jakarta mb-1 leading-tight">
@@ -51,7 +51,7 @@ export function KpiCard({ kpi, className }: KpiCardProps) {
               : kpi.value}
           </span>
           {kpi.unit && (
-            <span className="text-sm text-areia-400 font-jakarta">{kpi.unit}</span>
+            <span className="text-sm text-areia-500 font-jakarta">{kpi.unit}</span>
           )}
         </div>
 

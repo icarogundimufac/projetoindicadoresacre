@@ -6,8 +6,8 @@ import { AppShell } from '@/components/layout/AppShell'
 const DashboardRoute = lazy(() =>
   import('@/routes/DashboardRoute').then((module) => ({ default: module.DashboardRoute })),
 )
-const IndicatorRoute = lazy(() =>
-  import('@/routes/IndicatorRoute').then((module) => ({ default: module.IndicatorRoute })),
+const IndicadoresRoute = lazy(() =>
+  import('@/routes/IndicadoresRoute').then((module) => ({ default: module.IndicadoresRoute })),
 )
 const MapasRoute = lazy(() =>
   import('@/routes/MapasRoute').then((module) => ({ default: module.MapasRoute })),
@@ -46,6 +46,10 @@ function PublicLayout() {
   )
 }
 
+function SectionRedirect({ sectionId }: { sectionId: string }) {
+  return <Navigate to={`/indicadores?secao=${sectionId}`} replace />
+}
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -56,10 +60,11 @@ export default function App() {
           <Route path="/admin/dados" element={<AdminDataRoute />} />
           <Route element={<PublicLayout />}>
             <Route path="/" element={<DashboardRoute />} />
-            <Route path="/educacao" element={<IndicatorRoute sectionId="educacao" />} />
-            <Route path="/saude" element={<IndicatorRoute sectionId="saude" />} />
-            <Route path="/seguranca" element={<IndicatorRoute sectionId="seguranca" />} />
-            <Route path="/orcamento" element={<IndicatorRoute sectionId="orcamento" />} />
+            <Route path="/indicadores" element={<IndicadoresRoute />} />
+            <Route path="/educacao" element={<SectionRedirect sectionId="educacao" />} />
+            <Route path="/saude" element={<SectionRedirect sectionId="saude" />} />
+            <Route path="/seguranca" element={<SectionRedirect sectionId="seguranca" />} />
+            <Route path="/orcamento" element={<SectionRedirect sectionId="orcamento" />} />
             <Route path="/mapas" element={<MapasRoute />} />
             <Route path="/municipios" element={<MunicipiosRoute />} />
             <Route path="/municipios/:slug" element={<MunicipioDetailRoute />} />

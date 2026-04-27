@@ -7,21 +7,34 @@ import L, { type Layer, type LeafletMouseEvent, type PathOptions } from 'leaflet
 import 'leaflet/dist/leaflet.css'
 import { GeoJSON, MapContainer, TileLayer, useMap } from 'react-leaflet'
 import { queryKeys, portalDataClient } from '@/lib/data/client'
+import type { MunicipioSummary } from '@/types/municipio'
 import { generateColorScale } from '@/lib/utils/color-scale'
 import { MapLegend } from './MapLegend'
+
+export type MapColorScale = 'verde' | 'estrela' | 'heat' | 'azul' | 'roxo'
 
 export interface AcreMapProps {
   dataByMunicipio?: Record<string, number>
   unit?: string
   label?: string
-  colorScale?: 'verde' | 'estrela' | 'heat'
+  colorScale?: MapColorScale
   height?: number
 }
 
-const COLOR_PALETTES: Record<string, string[]> = {
+export const MAP_COLOR_PALETTES: Record<MapColorScale, string[]> = {
   verde: ['#d6f3e1', '#7bd09e', '#229157', '#0f5b36', '#072d1c'],
   estrela: ['#fde8e8', '#f5a0a0', '#e74c3c', '#c0392b', '#7b1f1a'],
   heat: ['#fffde7', '#fff176', '#ffd600', '#f57f17', '#e65100'],
+  azul: ['#dbeafe', '#93c5fd', '#3b82f6', '#1d4ed8', '#1e3a8a'],
+  roxo: ['#ede9fe', '#c4b5fd', '#8b5cf6', '#6d28d9', '#4c1d95'],
+}
+
+export const MAP_COLOR_SCALE_LABELS: Record<MapColorScale, string> = {
+  verde: 'Verde',
+  estrela: 'Vermelho',
+  heat: 'Amarelo',
+  azul: 'Azul',
+  roxo: 'Roxo',
 }
 
 const SATELLITE_TILE_URL =
@@ -66,12 +79,159 @@ function getMunicipioName(feature: Feature | undefined) {
   )
 }
 
-function getMunicipioSlug(name: string) {
-  return name
+function normalizeMunicipioText(value: string) {
+  return value
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
-    .replace(/\s+/g, '-')
+    .replace(/\uFFFD/g, '')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/[-_]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function getCanonicalMunicipioKey(name: string) {
+  return normalizeMunicipioText(name).replace(/\s+/g, '-')
+}
+
+interface NormalizedSlugEntry {
+  slug: string
+  normalized: string
+  compact: string
+}
+
+function buildMunicipioAliasMap(municipios: MunicipioSummary[]) {
+  const aliasMap = new Map<string, string>()
+
+  for (const municipio of municipios) {
+    const canonicalSlug = getCanonicalMunicipioKey(municipio.slug)
+    const normalizedSlug = normalizeMunicipioText(municipio.slug)
+    const normalizedName = normalizeMunicipioText(municipio.nome)
+
+    aliasMap.set(canonicalSlug, canonicalSlug)
+    aliasMap.set(getCanonicalMunicipioKey(municipio.nome), canonicalSlug)
+    aliasMap.set(normalizedSlug.replace(/\s+/g, ''), canonicalSlug)
+    aliasMap.set(normalizedName.replace(/\s+/g, ''), canonicalSlug)
+  }
+
+  return aliasMap
+}
+
+function buildValueByMunicipioSlug(
+  dataByMunicipio: Record<string, number>,
+  aliasToSlug: Map<string, string>,
+) {
+  const valueMap = new Map<string, number>()
+
+  for (const [rawKey, rawValue] of Object.entries(dataByMunicipio)) {
+    if (typeof rawValue !== 'number' || Number.isNaN(rawValue)) continue
+
+    const canonicalKey = getCanonicalMunicipioKey(rawKey)
+    const compactKey = normalizeMunicipioText(rawKey).replace(/\s+/g, '')
+    const canonicalSlug =
+      aliasToSlug.get(canonicalKey) ??
+      aliasToSlug.get(compactKey) ??
+      canonicalKey
+
+    valueMap.set(canonicalSlug, rawValue)
+  }
+
+  return valueMap
+}
+
+function getLevenshteinDistance(left: string, right: string) {
+  if (left === right) return 0
+  if (left.length === 0) return right.length
+  if (right.length === 0) return left.length
+
+  const previousRow = Array.from({ length: right.length + 1 }, (_, index) => index)
+
+  for (let row = 1; row <= left.length; row += 1) {
+    let diagonal = previousRow[0]
+    previousRow[0] = row
+
+    for (let column = 1; column <= right.length; column += 1) {
+      const up = previousRow[column]
+      const leftCost = previousRow[column - 1]
+      const substituteCost = diagonal + (left[row - 1] === right[column - 1] ? 0 : 1)
+
+      diagonal = up
+      previousRow[column] = Math.min(up + 1, leftCost + 1, substituteCost)
+    }
+  }
+
+  return previousRow[right.length]
+}
+
+function buildNormalizedSlugEntries(slugs: string[]): NormalizedSlugEntry[] {
+  return slugs.map((slug) => {
+    const normalized = normalizeMunicipioText(slug)
+    return {
+      slug,
+      normalized,
+      compact: normalized.replace(/\s+/g, ''),
+    }
+  })
+}
+
+function resolveMunicipioSlug(
+  feature: Feature | undefined,
+  slugEntries: NormalizedSlugEntry[],
+  aliasToSlug: Map<string, string>,
+) {
+  const name = getMunicipioName(feature)
+  const normalizedName = normalizeMunicipioText(name)
+  const compactName = normalizedName.replace(/\s+/g, '')
+  const canonicalName = getCanonicalMunicipioKey(name)
+  const aliasedSlug = aliasToSlug.get(canonicalName) ?? aliasToSlug.get(compactName)
+
+  if (aliasedSlug) {
+    return aliasedSlug
+  }
+
+  if (slugEntries.some((entry) => entry.slug === canonicalName)) {
+    return canonicalName
+  }
+
+  const exact =
+    slugEntries.find((entry) => entry.normalized === normalizedName) ??
+    slugEntries.find((entry) => entry.compact === compactName)
+
+  if (exact) return exact.slug
+
+  const partialMatches = slugEntries.filter(
+    (entry) =>
+      entry.compact.startsWith(compactName) ||
+      compactName.startsWith(entry.compact),
+  )
+
+  if (partialMatches.length === 1) {
+    return partialMatches[0].slug
+  }
+
+  // Fallback para nomes com caracteres corrompidos no GeoJSON (ex: "M�ncio", "Jord�o").
+  if (compactName.length > 0 && slugEntries.length > 0) {
+    const rankedMatches = slugEntries
+      .map((entry) => ({
+        slug: entry.slug,
+        distance: getLevenshteinDistance(compactName, entry.compact),
+      }))
+      .sort((left, right) => left.distance - right.distance)
+
+    const bestMatch = rankedMatches[0]
+    const secondBestMatch = rankedMatches[1]
+
+    if (
+      bestMatch &&
+      bestMatch.distance <= 2 &&
+      (!secondBestMatch || bestMatch.distance < secondBestMatch.distance)
+    ) {
+      return bestMatch.slug
+    }
+  }
+
+  return canonicalName
 }
 
 function FitToGeoJson({ geoJson }: { geoJson: GeoJsonObject | undefined }) {
@@ -160,14 +320,28 @@ export function AcreMap({
     queryKey: queryKeys.acreGeoJson,
     queryFn: portalDataClient.getAcreGeoJson,
   })
+  const { data: municipios = [] } = useQuery({
+    queryKey: queryKeys.municipios,
+    queryFn: portalDataClient.getMunicipios,
+  })
+
+  const municipioAliasToSlug = useMemo(
+    () => buildMunicipioAliasMap(municipios as MunicipioSummary[]),
+    [municipios],
+  )
+
+  const valueByMunicipioSlug = useMemo(
+    () => buildValueByMunicipioSlug(dataByMunicipio, municipioAliasToSlug),
+    [dataByMunicipio, municipioAliasToSlug],
+  )
 
   const values = useMemo(
-    () => Object.values(dataByMunicipio).filter((value) => value !== undefined && value !== null),
-    [dataByMunicipio],
+    () => Array.from(valueByMunicipioSlug.values()).filter((value) => value !== undefined && value !== null),
+    [valueByMunicipioSlug],
   )
   const min = values.length ? Math.min(...values) : 0
   const max = values.length ? Math.max(...values) : 1
-  const colors = COLOR_PALETTES[colorScale]
+  const colors = MAP_COLOR_PALETTES[colorScale]
   const colorFn = useMemo(
     () => generateColorScale(values, colors),
     [colors, values],
@@ -176,11 +350,23 @@ export function AcreMap({
     () => getGeoJsonBounds(geoJson as GeoJsonObject | undefined),
     [geoJson],
   )
+  const slugEntries = useMemo(
+    () => buildNormalizedSlugEntries(Array.from(valueByMunicipioSlug.keys())),
+    [valueByMunicipioSlug],
+  )
+  const municipioNameBySlug = useMemo(() => {
+    const map = new Map<string, string>()
+
+    for (const municipio of municipios as MunicipioSummary[]) {
+      map.set(getCanonicalMunicipioKey(municipio.slug), municipio.nome)
+    }
+
+    return map
+  }, [municipios])
 
   const styleFeature = (feature?: Feature): PathOptions => {
-    const name = getMunicipioName(feature)
-    const slug = getMunicipioSlug(name)
-    const value = dataByMunicipio[slug]
+    const slug = resolveMunicipioSlug(feature, slugEntries, municipioAliasToSlug)
+    const value = valueByMunicipioSlug.get(slug)
 
     return {
       fillColor: value !== undefined ? colorFn(value) : '#dbd5c9',
@@ -192,9 +378,10 @@ export function AcreMap({
   }
 
   const updateHover = (event: LeafletMouseEvent, feature?: Feature) => {
-    const name = getMunicipioName(feature)
-    const slug = getMunicipioSlug(name)
-    const value = dataByMunicipio[slug]
+    const rawName = getMunicipioName(feature)
+    const slug = resolveMunicipioSlug(feature, slugEntries, municipioAliasToSlug)
+    const name = municipioNameBySlug.get(slug) ?? rawName
+    const value = valueByMunicipioSlug.get(slug)
 
     setHovered({
       x: event.containerPoint.x,

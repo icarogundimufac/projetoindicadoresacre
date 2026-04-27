@@ -21,7 +21,6 @@ export function MunicipiosRoute() {
       <Header
         title="Municípios"
         subtitle={`${municipios.length} municípios do Estado do Acre`}
-        badge="Território"
       />
 
       <PageContent>

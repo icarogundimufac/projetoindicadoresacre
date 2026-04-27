@@ -1,5 +1,4 @@
 import { cn } from '@/lib/utils/cn'
-import { Card } from '@/components/ui/Card'
 
 interface ChartCardProps {
   title: string
@@ -19,12 +18,21 @@ export function ChartCard({
   action,
 }: ChartCardProps) {
   return (
-    <Card className={cn('overflow-hidden animate-fade-in', className)}>
-      <div className="px-6 pt-5 pb-4 border-b border-areia-100 flex items-start justify-between gap-4">
-        <div>
-          <h3 className="text-sm font-semibold text-verde-900 font-fraunces">{title}</h3>
+    <div
+      className={cn(
+        'overflow-hidden rounded-2xl border border-areia-200 bg-white shadow-sm animate-fade-in dark:bg-[#4a5546] dark:border-white/12',
+        className,
+      )}
+    >
+      <div className="flex items-start justify-between gap-4 border-b border-areia-100 px-6 pt-5 pb-4">
+        <div className="min-w-0">
+          <h3 className="text-sm font-semibold text-verde-900 font-fraunces">
+            {title}
+          </h3>
           {subtitle && (
-            <p className="mt-0.5 text-xs text-areia-400 font-jakarta">{subtitle}</p>
+            <p className="mt-0.5 text-xs leading-relaxed text-areia-400 font-jakarta">
+              {subtitle}
+            </p>
           )}
         </div>
         {action && <div className="flex-shrink-0">{action}</div>}
@@ -33,12 +41,12 @@ export function ChartCard({
       <div className="p-6">{children}</div>
 
       {source && (
-        <div className="px-6 pb-4">
+        <div className="border-t border-areia-100 px-6 py-3 bg-areia-50/40 dark:bg-white/5">
           <p className="text-[10px] text-areia-400 font-jakarta">
             Fonte: {source}
           </p>
         </div>
       )}
-    </Card>
+    </div>
   )
 }

@@ -3,7 +3,6 @@ import {
   CartesianGrid,
   Line,
   LineChart,
-  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -13,17 +12,18 @@ import { formatNumber } from '@/lib/utils/format'
 
 interface DataPoint {
   year: number
-  value: number
-  [key: string]: number | string
+  value1: number
+  value2: number
 }
 
-export interface LineChartWrapperProps {
+export interface DualLineChartProps {
   data: DataPoint[]
-  color?: string
+  label1: string
+  label2: string
+  color1?: string
+  color2?: string
   unit?: string
   height?: number
-  referenceValue?: number
-  referenceLabel?: string
 }
 
 interface TooltipContentProps {
@@ -35,7 +35,6 @@ function TooltipCard({ active, payload, unit }: TooltipContentProps & { unit?: s
   if (!active || !payload?.length) return null
 
   const datum = payload[0]?.payload
-
   if (!datum) return null
 
   return (
@@ -43,32 +42,34 @@ function TooltipCard({ active, payload, unit }: TooltipContentProps & { unit?: s
       <p className="text-[10px] font-bold uppercase tracking-widest text-areia-400 mb-1">
         {datum.year}
       </p>
-      <p className="tabular-nums font-semibold text-verde-900">
-        {formatNumber(datum.value)}
-        {unit ? ` ${unit}` : ''}
-      </p>
+      <div className="space-y-1">
+        <p className="tabular-nums font-semibold text-verde-900">
+          {formatNumber(datum.value1)}
+          {unit ? ` ${unit}` : ''}
+        </p>
+        <p className="tabular-nums font-semibold text-verde-900">
+          {formatNumber(datum.value2)}
+          {unit ? ` ${unit}` : ''}
+        </p>
+      </div>
     </div>
   )
 }
 
-function LineChartWrapperInternal({
+function DualLineChartInternal({
   data,
-  color = '#229157',
+  label1,
+  label2,
+  color1 = '#157244',
+  color2 = '#44b375',
   unit = '',
   height = 280,
-  referenceValue,
-  referenceLabel,
-}: LineChartWrapperProps) {
+}: DualLineChartProps) {
   if (data.length === 0) return null
 
-  const yMax = Math.max(
-    ...data.map((datum) => datum.value),
-    referenceValue ?? Number.NEGATIVE_INFINITY,
-  )
-  const yMin = Math.min(
-    ...data.map((datum) => datum.value),
-    referenceValue ?? Number.POSITIVE_INFINITY,
-  )
+  const allValues = data.flatMap((d) => [d.value1, d.value2])
+  const yMax = Math.max(...allValues)
+  const yMin = Math.min(...allValues)
   const domainPadding = Math.max((yMax - yMin) * 0.15, 1)
 
   return (
@@ -98,31 +99,24 @@ function LineChartWrapperInternal({
             cursor={{ stroke: '#e5e1d6', strokeDasharray: '4 4' }}
             content={<TooltipCard unit={unit} />}
           />
-          {referenceValue !== undefined && (
-            <ReferenceLine
-              y={referenceValue}
-              stroke="#c0392b"
-              strokeDasharray="4 4"
-              ifOverflow="extendDomain"
-              label={
-                referenceLabel
-                  ? {
-                      value: referenceLabel,
-                      position: 'insideTopRight',
-                      fill: '#c0392b',
-                      fontSize: 10,
-                    }
-                  : undefined
-              }
-            />
-          )}
           <Line
             type="monotone"
-            dataKey="value"
-            stroke={color}
-            strokeWidth={3}
-            dot={{ r: 5, fill: color, stroke: '#fff', strokeWidth: 2.5 }}
-            activeDot={{ r: 6, fill: color, stroke: '#fff', strokeWidth: 2.5 }}
+            dataKey="value1"
+            name={label1}
+            stroke={color1}
+            strokeWidth={2.5}
+            dot={{ r: 4, fill: color1, stroke: '#fff', strokeWidth: 2 }}
+            activeDot={{ r: 5, fill: color1, stroke: '#fff', strokeWidth: 2 }}
+          />
+          <Line
+            type="monotone"
+            dataKey="value2"
+            name={label2}
+            stroke={color2}
+            strokeWidth={2.5}
+            strokeDasharray="6 4"
+            dot={{ r: 4, fill: color2, stroke: '#fff', strokeWidth: 2 }}
+            activeDot={{ r: 5, fill: color2, stroke: '#fff', strokeWidth: 2 }}
           />
         </LineChart>
       </ResponsiveContainer>
@@ -130,4 +124,4 @@ function LineChartWrapperInternal({
   )
 }
 
-export const LineChartWrapper = React.memo(LineChartWrapperInternal)
+export const DualLineChart = React.memo(DualLineChartInternal)

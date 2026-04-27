@@ -2,6 +2,7 @@ import type { Config } from 'tailwindcss'
 import animate from 'tailwindcss-animate'
 
 const config: Config = {
+  darkMode: 'class',
   content: [
     './index.html',
     './src/**/*.{js,ts,jsx,tsx,mdx}',
@@ -63,13 +64,15 @@ const config: Config = {
         },
       },
       fontFamily: {
-        fraunces: ['var(--font-fraunces)', 'Georgia', 'serif'],
+        fraunces: ['var(--font-fraunces)', 'Helvetica', 'Arial', 'sans-serif'],
         jakarta: ['var(--font-jakarta)', 'system-ui', 'sans-serif'],
+        roboto: ['var(--font-roboto)', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-mono)', 'JetBrains Mono', 'Fira Code', 'monospace'],
       },
       animation: {
-        'fade-in': 'fadeIn 0.4s ease-out',
-        'slide-up': 'slideUp 0.4s ease-out',
-        'slide-in-left': 'slideInLeft 0.3s ease-out',
+        'fade-in': 'fadeIn 0.4s ease-out both',
+        'slide-up': 'slideUp 0.4s ease-out both',
+        'slide-in-left': 'slideInLeft 0.3s ease-out both',
       },
       keyframes: {
         fadeIn: {

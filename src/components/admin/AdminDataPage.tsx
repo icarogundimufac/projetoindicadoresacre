@@ -31,6 +31,8 @@ import { SpreadsheetGrid } from './SpreadsheetGrid'
 import { SheetTabBar } from './SheetTabBar'
 
 import { MapaFormPanel } from './MapaFormPanel'
+import { AddIndicatorModal, type AddIndicatorFormData } from './AddIndicatorModal'
+import { ImportIndicatorDataModal } from './ImportIndicatorDataModal'
 
 import { municipiosColumns } from './sheets/MunicipiosSheet'
 import { municipioIndicadoresColumns } from './sheets/MunicipioIndicadoresSheet'
@@ -57,6 +59,15 @@ export function AdminDataPage({
 }: AdminDataPageProps) {
   const [bundle, setBundle] = useState<PortalDataBundle | null>(initialBundle)
   const [status, setStatus] = useState<StatusMessage | null>(null)
+
+  const [showAddIndicatorModal, setShowAddIndicatorModal] = useState(false)
+  const [showImportDataModal, setShowImportDataModal] = useState(false)
+  const [createdIndicator, setCreatedIndicator] = useState<{
+    sectionId: IndicatorSectionId
+    groupId: string
+    indicatorId: string
+    indicatorLabel: string
+  } | null>(null)
 
   // Sheet-specific filter state
   const [selectedIndicatorSection, setSelectedIndicatorSection] =
@@ -199,6 +210,24 @@ export function AdminDataPage({
       }
     }
   }, [mapVariableOptions, selectedMapVariableKey])
+
+  const bundleGroups = useMemo(
+    () => {
+      const result: Record<IndicatorSectionId, Array<{ id: string; label: string }>> = {
+        educacao: [],
+        saude: [],
+        seguranca: [],
+        orcamento: [],
+      }
+      if (bundle) {
+        for (const id of INDICATOR_SECTION_IDS) {
+          result[id] = (bundle.sections[id]?.groups ?? []).map((g) => ({ id: g.id, label: g.label }))
+        }
+      }
+      return result
+    },
+    [bundle],
+  )
 
   // Filtered rows for active sheet
   const filteredIndicatorRows = useMemo(
@@ -415,6 +444,69 @@ export function AdminDataPage({
     mutations.saveMapIndicatorForm(params)
   }
 
+  const handleAddIndicator = (data: AddIndicatorFormData) => {
+    mutations.createIndicatorFromMetadata(
+      data.sectionId,
+      data.groupId,
+      data.groupLabel,
+      data.indicatorLabel,
+      data.indicatorLabel,
+      data.description,
+      data.unit,
+      data.source,
+    )
+    setCreatedIndicator({
+      sectionId: data.sectionId,
+      groupId: data.groupId,
+      indicatorId: data.indicatorLabel.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w]+/g, '_').replace(/^_|_$/g, '') || 'nova_variavel',
+      indicatorLabel: data.indicatorLabel,
+    })
+    setShowAddIndicatorModal(false)
+    setShowImportDataModal(true)
+  }
+
+  const handleIndicatorFileImport = async (file: File) => {
+    if (!createdIndicator) {
+      const result = await importExport.handleIndicatorFileImport(file)
+      if (result) {
+        setSelectedIndicatorSection(result.sectionId)
+        setSelectedIndicatorGroup(result.groupId)
+        setSelectedIndicatorId(result.indicatorId)
+        spreadsheet.changeSheet('indicadores')
+        requestImmediateSectionPersist(result.sectionId)
+      }
+      setShowImportDataModal(false)
+      setCreatedIndicator(null)
+      return
+    }
+
+    const parsed = await importExport.parseIndicatorDataFile(file)
+    if (!parsed) {
+      setShowImportDataModal(false)
+      setCreatedIndicator(null)
+      return
+    }
+
+    mutations.importIndicatorData(
+      createdIndicator.sectionId,
+      createdIndicator.groupId,
+      createdIndicator.indicatorId,
+      parsed.years,
+      parsed.municipalityData,
+    )
+    setSelectedIndicatorSection(createdIndicator.sectionId)
+    setSelectedIndicatorGroup(createdIndicator.groupId)
+    setSelectedIndicatorId(createdIndicator.indicatorId)
+    spreadsheet.changeSheet('indicadores')
+    requestImmediateSectionPersist(createdIndicator.sectionId)
+    setShowImportDataModal(false)
+    setCreatedIndicator(null)
+  }
+
+  const handleDownloadIndicatorTemplateForCreated = (years: number[]) => {
+    importExport.exportIndicatorTemplate()
+  }
+
   return (
     <SpreadsheetShell>
       {/* Status toast */}
@@ -442,6 +534,7 @@ export function AdminDataPage({
           importExport.exportMunicipalTemplate(selectedMapVariableKey, selectedMapYear)
         }
         onAddRow={config.onAddRow}
+        onAddIndicator={() => setShowAddIndicatorModal(true)}
         showTemplateActions={config.showTemplate}
         templateLabel={
           selectedMapOption
@@ -489,6 +582,40 @@ export function AdminDataPage({
         onSheetChange={spreadsheet.changeSheet}
         rowCounts={rowCounts}
       />
+
+      {/* Add indicator modal */}
+      {showAddIndicatorModal && bundle && (
+        <AddIndicatorModal
+          bundleGroups={bundleGroups}
+          onConfirm={handleAddIndicator}
+          onImportFile={async (file) => {
+            const result = await importExport.handleIndicatorFileImport(file)
+            if (result) {
+              setSelectedIndicatorSection(result.sectionId)
+              setSelectedIndicatorGroup(result.groupId)
+              setSelectedIndicatorId(result.indicatorId)
+              spreadsheet.changeSheet('indicadores')
+              requestImmediateSectionPersist(result.sectionId)
+            }
+            setShowAddIndicatorModal(false)
+          }}
+          onDownloadTemplate={importExport.exportIndicatorTemplate}
+          onClose={() => setShowAddIndicatorModal(false)}
+        />
+      )}
+
+      {/* Import data modal for created indicator */}
+      {showImportDataModal && createdIndicator && (
+        <ImportIndicatorDataModal
+          indicatorLabel={createdIndicator.indicatorLabel}
+          onImport={handleIndicatorFileImport}
+          onDownloadTemplate={handleDownloadIndicatorTemplateForCreated}
+          onClose={() => {
+            setShowImportDataModal(false)
+            setCreatedIndicator(null)
+          }}
+        />
+      )}
     </SpreadsheetShell>
   )
 }

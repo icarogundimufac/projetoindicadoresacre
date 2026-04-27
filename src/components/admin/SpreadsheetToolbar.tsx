@@ -5,6 +5,7 @@ import {
   FileSpreadsheet,
   FileUp,
   Plus,
+  PlusCircle,
   Trash2,
   Upload,
 } from 'lucide-react'
@@ -19,6 +20,7 @@ interface SpreadsheetToolbarProps {
   onDownloadTemplate: () => void
   onAddRow?: () => void
   onRemoveRow?: () => void
+  onAddIndicator?: () => void
   showTemplateActions?: boolean
   templateLabel?: string
   children?: ReactNode
@@ -114,6 +116,7 @@ export function SpreadsheetToolbar({
   onDownloadTemplate,
   onAddRow,
   onRemoveRow,
+  onAddIndicator,
   showTemplateActions = false,
   templateLabel,
   children,
@@ -165,6 +168,11 @@ export function SpreadsheetToolbar({
       <Divider />
 
       <ToolbarGroup label="Editar">
+        {onAddIndicator && (
+          <ToolbarButton onClick={onAddIndicator} variant="primary" icon={PlusCircle}>
+            Variavel
+          </ToolbarButton>
+        )}
         {onAddRow && (
           <ToolbarButton onClick={onAddRow} variant="primary" icon={Plus}>
             Linha

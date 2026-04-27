@@ -11,10 +11,13 @@ const shpPath = path.join(rootDir, 'ACRESHAPE', 'AC_Municipios_2024.shp')
 const dbfPath = path.join(rootDir, 'ACRESHAPE', 'AC_Municipios_2024.dbf')
 const outputDir = path.join(rootDir, 'public', 'shapefiles')
 const outputPath = path.join(outputDir, 'acre-municipios.geojson')
+const dbfEncoding = process.env.SHAPEFILE_DBF_ENCODING ?? 'latin1'
 
-const geoJson = await read(shpPath, dbfPath, { encoding: 'utf-8' })
+const geoJson = await read(shpPath, dbfPath, { encoding: dbfEncoding })
 
 await mkdir(outputDir, { recursive: true })
 await writeFile(outputPath, `${JSON.stringify(geoJson, null, 2)}\n`, 'utf8')
 
-console.log(`[sync:shapefile] GeoJSON atualizado em ${path.relative(rootDir, outputPath)}`)
+console.log(
+	`[sync:shapefile] GeoJSON atualizado em ${path.relative(rootDir, outputPath)} (encoding: ${dbfEncoding})`,
+)

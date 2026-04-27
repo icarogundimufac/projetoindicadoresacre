@@ -54,7 +54,6 @@ export function MunicipioDetailRoute() {
       <Header
         title={summary.nome}
         subtitle={`${summary.regiaoJudiciaria} · Estado do Acre`}
-        badge="Município"
       />
 
       <PageContent>
@@ -85,7 +84,7 @@ export function MunicipioDetailRoute() {
 
         {detail?.indicadores && detail.indicadores.length > 0 ? (
           <section>
-            <h2 className="text-xs font-bold uppercase tracking-widest text-areia-400 font-jakarta mb-4">
+            <h2 className="text-xs font-bold uppercase tracking-widest text-verde-700 font-jakarta mb-4">
               Indicadores do município
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -650,6 +650,109 @@ export function useBundleMutations(
     })
   }
 
+  const createIndicatorFromMetadata = (
+    sectionId: IndicatorSectionId,
+    groupId: string,
+    groupLabel: string,
+    indicatorId: string,
+    indicatorLabel: string,
+    description: string,
+    unit: string,
+    source: string,
+  ) => {
+    patchBundle((draft) => {
+      const section = draft.sections[sectionId]
+      let group = section.groups.find((g) => g.id === groupId)
+      if (!group) {
+        group = { id: groupId, label: groupLabel || groupId, indicators: [] }
+        section.groups.push(group)
+      }
+
+      const normalizedId = indicatorId.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w]+/g, '_').replace(/^_|_$/g, '')
+      if (!normalizedId) {
+        setStatus({ kind: 'error', message: 'Informe um nome para a variavel.' })
+        return
+      }
+
+      let finalId = normalizedId
+      let counter = 1
+      while (group.indicators.some((i) => i.id === finalId)) {
+        finalId = `${normalizedId}_${counter}`
+        counter++
+      }
+
+      group.indicators.push({
+        id: finalId,
+        label: indicatorLabel.trim() || finalId,
+        description: description.trim(),
+        unit: unit.trim(),
+        source: source.trim(),
+        latestValue: 0,
+        timeSeries: [{ year: new Date().getFullYear(), value: 0 }],
+      })
+      setStatus({ kind: 'success', message: `Variavel "${indicatorLabel.trim() || finalId}" criada com sucesso.` })
+    })
+  }
+
+  const importIndicatorData = (
+    sectionId: IndicatorSectionId,
+    groupId: string,
+    indicatorId: string,
+    years: string[],
+    municipalityData: Map<string, Record<string, number | ''>>,
+  ) => {
+    patchBundle((draft) => {
+      const section = draft.sections[sectionId]
+      const group = section.groups.find((g) => g.id === groupId)
+      if (!group) return
+      const indicator = group.indicators.find((i) => i.id === indicatorId)
+      if (!indicator) return
+
+      const fallbackYear = Number(section.lastUpdated.slice(0, 4)) || new Date().getFullYear()
+
+      for (const yearStr of years) {
+        const yearValues: Record<string, number> = {}
+        let sum = 0
+        let count = 0
+
+        for (const [slug, yearData] of municipalityData) {
+          const val = yearData[yearStr]
+          if (val !== '' && val !== undefined) {
+            yearValues[slug] = val
+            sum += val
+            count++
+          }
+        }
+
+        if (Object.keys(yearValues).length > 0) {
+          if (!indicator.mapSeries) indicator.mapSeries = {}
+          indicator.mapSeries[yearStr] = yearValues
+        }
+
+        if (count > 0) {
+          const avg = sum / count
+          const existingPoint = indicator.timeSeries.find((p) => p.year === Number(yearStr))
+          if (existingPoint) {
+            existingPoint.value = avg
+          } else {
+            indicator.timeSeries.push({ year: Number(yearStr), value: avg })
+          }
+        }
+      }
+
+      indicator.timeSeries.sort((a, b) => a.year - b.year)
+
+      if (indicator.mapSeries && Object.keys(indicator.mapSeries).length > 0) {
+        indicator.byMunicipio = getIndicatorLatestByMunicipio(indicator, fallbackYear)
+      }
+
+      if (indicator.timeSeries.length > 0) {
+        indicator.latestValue = indicator.timeSeries[indicator.timeSeries.length - 1].value
+      }
+    })
+    setStatus({ kind: 'success', message: 'Dados municipais importados com sucesso.' })
+  }
+
   return {
     updateDashboardKpiCell,
     updateDashboardSummaryCell,
@@ -671,5 +774,7 @@ export function useBundleMutations(
     removeIndicatorRow,
     removeMapRow,
     removeMunicipioIndicatorRow,
+    createIndicatorFromMetadata,
+    importIndicatorData,
   }
 }
