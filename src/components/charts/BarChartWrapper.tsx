@@ -166,7 +166,7 @@ function HorizontalChart({
         tickMargin={10}
       />
       <Tooltip cursor={{ fill: '#faf8f3' }} content={<TooltipCard unit={unit} />} />
-      <Bar dataKey="value" radius={[0, 10, 10, 0]} barSize={18}>
+      <Bar dataKey="value" radius={[0, 10, 10, 0]}>
         <LabelList
           dataKey="value"
           position="right"

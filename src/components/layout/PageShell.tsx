@@ -15,7 +15,7 @@ export function PageShell({ children, className }: PageShellProps) {
 
 export function PageContent({ children, className }: PageShellProps) {
   return (
-    <div className={cn('px-8 pt-8 pb-12', className)}>
+    <div className={cn('px-8 pt-3 pb-12', className)}>
       {children}
     </div>
   )

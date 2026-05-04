@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import {
   createColumnHelper,
   flexRender,
@@ -31,7 +31,7 @@ interface IndicatorDataTableProps {
 
 const columnHelper = createColumnHelper<TableRow>()
 
-export function IndicatorDataTable({ indicators, sectionId }: IndicatorDataTableProps) {
+function IndicatorDataTableComponent({ indicators, sectionId }: IndicatorDataTableProps) {
   const [sorting, setSorting] = useState<SortingState>([])
 
   const rows: TableRow[] = indicators.map((ind) => {
@@ -215,3 +215,5 @@ export function IndicatorDataTable({ indicators, sectionId }: IndicatorDataTable
     </div>
   )
 }
+
+export const IndicatorDataTable = memo(IndicatorDataTableComponent)

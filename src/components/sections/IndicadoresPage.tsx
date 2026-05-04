@@ -1,130 +1,28 @@
 import { useMemo } from 'react'
-import { Header } from '@/components/layout/Header'
 import { PageShell, PageContent } from '@/components/layout/PageShell'
 import { SectionSelector } from './SectionSelector'
-import { SectionHero } from './SectionHero'
-import { SectionKpiGrid } from './SectionKpiGrid'
 import { EducacaoCharts } from './EducacaoCharts'
 import { SaudeCharts } from './SaudeCharts'
 import { SegurancaCharts } from './SegurancaCharts'
 import { OrcamentoCharts } from './OrcamentoCharts'
 import { IndicatorDataTable } from './IndicatorDataTable'
+import { SectionKpis } from './SectionKpis'
+import { EducacaoKpis } from './EducacaoKpis'
+import { SaudeKpis } from './SaudeKpis'
+import { SegurancaKpis } from './SegurancaKpis'
+import { OrcamentoKpis } from './OrcamentoKpis'
 import {
   INDICATOR_SECTION_META,
   INDICATOR_SECTION_IDS,
   type IndicatorSectionId,
 } from '@/lib/constants/indicator-sections'
 import { SECTIONS } from '@/lib/constants/sections'
-import { formatCompactCurrency } from '@/lib/utils/format'
-import type { IndicatorSection, TimeSeriesPoint } from '@/types/indicators'
+import type { IndicatorSection } from '@/types/indicators'
 
 interface IndicadoresPageProps {
   activeSectionId: IndicatorSectionId
   onSectionChange: (sectionId: IndicatorSectionId) => void
   data: Record<IndicatorSectionId, IndicatorSection | null>
-}
-
-type KpiItem = {
-  id: string
-  section: string
-  label: string
-  value: number | string
-  unit: string
-  delta?: number
-  deltaDirection?: 'up' | 'down' | 'neutral'
-  positiveDirection?: 'up' | 'down'
-  year: number
-  sparklineData?: TimeSeriesPoint[]
-  accentColor?: string
-}
-
-const SECTION_COLORS: Record<IndicatorSectionId, string[]> = {
-  educacao: ['#157244', '#229157', '#44b375', '#F2C230'],
-  saude: ['#C7392F', '#229157', '#e67e22', '#157244'],
-  seguranca: ['#e67e22', '#C7392F', '#d4a017', '#157244'],
-  orcamento: ['#d4a017', '#0f5b36', '#229157', '#F2C230'],
-}
-
-function getSectionKpis(
-  sectionId: IndicatorSectionId,
-  data: IndicatorSection,
-): KpiItem[] {
-  const colors = SECTION_COLORS[sectionId]
-
-  switch (sectionId) {
-    case 'educacao':
-      return data.groups.flatMap((group) =>
-        group.indicators
-          .filter((indicator) => indicator.latestValue !== undefined)
-          .map((indicator, idx) => ({
-            id: indicator.id,
-            section: sectionId,
-            label: indicator.label,
-            value: indicator.latestValue!,
-            unit: indicator.unit,
-            delta: indicator.delta,
-            deltaDirection: indicator.deltaDirection,
-            year: indicator.timeSeries.at(-1)?.year ?? 2023,
-            sparklineData: indicator.timeSeries,
-            accentColor: colors[idx % colors.length],
-          })),
-      )
-    case 'saude':
-      return data.groups.flatMap((group) =>
-        group.indicators
-          .filter((indicator) => indicator.latestValue !== undefined)
-          .map((indicator, idx) => ({
-            id: indicator.id,
-            section: sectionId,
-            label: indicator.label,
-            value: indicator.latestValue!,
-            unit: indicator.unit,
-            delta: indicator.delta,
-            deltaDirection: indicator.deltaDirection,
-            positiveDirection: indicator.id.includes('mortalidade')
-              ? 'down'
-              : 'up',
-            year: indicator.timeSeries.at(-1)?.year ?? 2023,
-            sparklineData: indicator.timeSeries,
-            accentColor: colors[idx % colors.length],
-          })),
-      )
-    case 'seguranca':
-      return data.groups.flatMap((group) =>
-        group.indicators
-          .filter((indicator) => indicator.latestValue !== undefined)
-          .map((indicator, idx) => ({
-            id: indicator.id,
-            section: sectionId,
-            label: indicator.label,
-            value: indicator.latestValue!,
-            unit: indicator.unit,
-            delta: indicator.delta,
-            deltaDirection: indicator.deltaDirection,
-            positiveDirection: 'down',
-            year: indicator.timeSeries.at(-1)?.year ?? 2023,
-            sparklineData: indicator.timeSeries,
-            accentColor: colors[idx % colors.length],
-          })),
-      )
-    case 'orcamento':
-      return data.groups.flatMap((group) =>
-        group.indicators
-          .filter((indicator) => indicator.latestValue !== undefined)
-          .map((indicator, idx) => ({
-            id: indicator.id,
-            section: sectionId,
-            label: indicator.label,
-            value: formatCompactCurrency(indicator.latestValue!),
-            unit: '',
-            delta: indicator.delta,
-            deltaDirection: indicator.deltaDirection,
-            year: indicator.timeSeries.at(-1)?.year ?? 2023,
-            sparklineData: indicator.timeSeries,
-            accentColor: colors[idx % colors.length],
-          })),
-      )
-  }
 }
 
 const SECTION_OPTIONS = INDICATOR_SECTION_IDS.map((id) => ({
@@ -146,76 +44,82 @@ export function IndicadoresPage({
     return activeData.groups.flatMap((g) => g.indicators)
   }, [activeData])
 
-  const kpis = useMemo(
-    () => (activeData ? getSectionKpis(activeSectionId, activeData) : []),
-    [activeSectionId, activeData],
-  )
-
-  const lastUpdated = activeData?.lastUpdated
-    ? new Date(activeData.lastUpdated).toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric',
-      })
-    : undefined
-
   return (
     <PageShell>
-      <Header
-        title="Indicadores"
-        subtitle="Selecione uma área temática para explorar os indicadores do Estado do Acre"
-      />
+      <section className="w-full border-b border-areia-200 px-4 pt-4 pb-5 sm:px-6 lg:px-8 dark:border-ouro-400/20">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0 border-l-2 border-verde-500 pl-3 dark:border-ouro-400 lg:max-w-sm">
+            <h1 className="mt-1 text-[clamp(1.1rem,1.6vw,1.55rem)] font-semibold tracking-[-0.04em] text-verde-950 font-fraunces leading-[0.98]">
+              Indicadores
+            </h1>
+            <p className="mt-1 max-w-3xl text-[11px] leading-4 text-areia-500 font-jakarta dark:text-areia-300">
+              Selecione uma área temática para explorar os indicadores do Estado do Acre
+            </p>
+          </div>
+
+          <div className="w-full lg:w-auto lg:min-w-[560px] lg:max-w-[680px] lg:pt-0.5">
+            <SectionSelector
+              sections={SECTION_OPTIONS}
+              activeSectionId={activeSectionId}
+              onChange={onSectionChange}
+            />
+          </div>
+        </div>
+      </section>
 
       <PageContent>
-        <section className="mb-6">
-          <SectionSelector
-            sections={SECTION_OPTIONS}
-            activeSectionId={activeSectionId}
-            onChange={onSectionChange}
-          />
-        </section>
+        <div
+          key={activeSectionId}
+          className="animate-fade-in motion-reduce:animate-none"
+        >
+          {activeData && (
+            <div
+              className="mt-1 animate-slide-up motion-reduce:animate-none"
+              style={{ animationDelay: '80ms' }}
+            >
+              {activeSectionId === 'educacao' && <EducacaoKpis data={activeData} />}
+              {activeSectionId === 'saude' && <SaudeKpis data={activeData} />}
+              {activeSectionId === 'seguranca' && <SegurancaKpis data={activeData} />}
+              {activeSectionId === 'orcamento' && <OrcamentoKpis data={activeData} />}
+            </div>
+          )}
 
-        <SectionHero
-          title={meta.title}
-          subtitle={meta.subtitle}
-          lastUpdated={lastUpdated}
-        />
-
-        {kpis.length > 0 && (
-          <div className="mt-6">
-            <SectionKpiGrid kpis={kpis} />
+          <div
+            className="mt-3 animate-slide-up motion-reduce:animate-none"
+            style={{ minHeight: 200, animationDelay: '100ms' }}
+          >
+            {activeData ? (
+              <>
+                {activeSectionId === 'educacao' && <EducacaoCharts data={activeData} />}
+                {activeSectionId === 'saude' && <SaudeCharts data={activeData} />}
+                {activeSectionId === 'seguranca' && <SegurancaCharts data={activeData} />}
+                {activeSectionId === 'orcamento' && <OrcamentoCharts data={activeData} />}
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <span className="text-4xl mb-3 opacity-30">📊</span>
+                <p className="text-sm text-areia-400 font-jakarta">
+                  Dados não disponíveis. Verifique o arquivo{' '}
+                  <code className="bg-areia-200 rounded px-1.5 py-0.5 text-xs">
+                    {meta.missingDataPath}
+                  </code>.
+                </p>
+              </div>
+            )}
           </div>
-        )}
 
-        <div className="mt-6" style={{ minHeight: 200 }}>
-          {activeData ? (
-            <>
-              {activeSectionId === 'educacao' && <EducacaoCharts data={activeData} />}
-              {activeSectionId === 'saude' && <SaudeCharts data={activeData} />}
-              {activeSectionId === 'seguranca' && <SegurancaCharts data={activeData} />}
-              {activeSectionId === 'orcamento' && <OrcamentoCharts data={activeData} />}
-            </>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <span className="text-4xl mb-3 opacity-30">📊</span>
-              <p className="text-sm text-areia-400 font-jakarta">
-                Dados não disponíveis. Verifique o arquivo{' '}
-                <code className="bg-areia-200 rounded px-1.5 py-0.5 text-xs">
-                  {meta.missingDataPath}
-                </code>.
-              </p>
+          {allIndicators.length > 0 && (
+            <div
+              className="mt-5 animate-slide-up motion-reduce:animate-none"
+              style={{ animationDelay: '200ms' }}
+            >
+              <IndicatorDataTable
+                indicators={allIndicators}
+                sectionId={activeSectionId}
+              />
             </div>
           )}
         </div>
-
-        {allIndicators.length > 0 && (
-          <div className="mt-8">
-            <IndicatorDataTable
-              indicators={allIndicators}
-              sectionId={activeSectionId}
-            />
-          </div>
-        )}
       </PageContent>
     </PageShell>
   )

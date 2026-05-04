@@ -9,6 +9,16 @@ const DashboardRoute = lazy(() =>
 const IndicadoresRoute = lazy(() =>
   import('@/routes/IndicadoresRoute').then((module) => ({ default: module.IndicadoresRoute })),
 )
+const IndicadoresVisaoGeral = lazy(() =>
+  import('@/components/sections/IndicadoresVisaoGeral').then((module) => ({
+    default: module.IndicadoresVisaoGeral,
+  })),
+)
+const IndicadoresMapaRoute = lazy(() =>
+  import('@/routes/IndicadoresMapaRoute').then((module) => ({
+    default: module.IndicadoresMapaRoute,
+  })),
+)
 const MapasRoute = lazy(() =>
   import('@/routes/MapasRoute').then((module) => ({ default: module.MapasRoute })),
 )
@@ -47,7 +57,7 @@ function PublicLayout() {
 }
 
 function SectionRedirect({ sectionId }: { sectionId: string }) {
-  return <Navigate to={`/indicadores?secao=${sectionId}`} replace />
+  return <Navigate to={`/indicadores/visao-geral?secao=${sectionId}`} replace />
 }
 
 export default function App() {
@@ -60,7 +70,11 @@ export default function App() {
           <Route path="/admin/dados" element={<AdminDataRoute />} />
           <Route element={<PublicLayout />}>
             <Route path="/" element={<DashboardRoute />} />
-            <Route path="/indicadores" element={<IndicadoresRoute />} />
+            <Route path="/indicadores" element={<IndicadoresRoute />}>
+              <Route index element={<Navigate to="/indicadores/visao-geral" replace />} />
+              <Route path="visao-geral" element={<IndicadoresVisaoGeral />} />
+              <Route path="mapa" element={<IndicadoresMapaRoute />} />
+            </Route>
             <Route path="/educacao" element={<SectionRedirect sectionId="educacao" />} />
             <Route path="/saude" element={<SectionRedirect sectionId="saude" />} />
             <Route path="/seguranca" element={<SectionRedirect sectionId="seguranca" />} />

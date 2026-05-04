@@ -1,5 +1,5 @@
 import JSZip from 'jszip'
-import * as XLSX from 'xlsx'
+import * as XLSX from '@e965/xlsx'
 import {
   INDICATOR_SECTION_IDS,
   type IndicatorSectionId,

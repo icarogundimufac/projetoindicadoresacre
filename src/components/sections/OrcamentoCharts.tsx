@@ -1,8 +1,10 @@
 import React, { useMemo } from 'react'
 import { ChartCard } from '@/components/charts/ChartCard'
-import { LazyAreaChart } from '@/components/charts/LazyAreaChart'
+import {
+  InteractiveTimeSeriesChart,
+  type TimeSeriesConfig,
+} from '@/components/charts/InteractiveTimeSeriesChart'
 import { LazyBarChart } from '@/components/charts/LazyBarChart'
-import { DualAreaChart } from '@/components/charts/DualAreaChart'
 import type { IndicatorSection } from '@/types/indicators'
 
 function getTimeSeries(
@@ -29,24 +31,42 @@ interface OrcamentoChartsProps {
 }
 
 function OrcamentoChartsComponent({ data }: OrcamentoChartsProps) {
-  const receitaSeries = useMemo(
-    () => getTimeSeries(data, 'receitas', 'receita_total').map((p) => ({ year: p.year, value: p.value })),
-    [data],
-  )
-  const despesaSeries = useMemo(
-    () => getTimeSeries(data, 'despesas', 'despesa_total').map((p) => ({ year: p.year, value: p.value })),
-    [data],
-  )
-  const dualData = useMemo(() => {
-    return receitaSeries.map((p) => {
-      const despesaPoint = despesaSeries.find((d) => d.year === p.year)
-      return {
-        year: p.year,
-        value1: p.value,
-        value2: despesaPoint?.value ?? 0,
-      }
-    })
-  }, [receitaSeries, despesaSeries])
+  const timeSeriesConfigs: TimeSeriesConfig[] = useMemo(() => {
+    const series: TimeSeriesConfig[] = []
+
+    const receita = getTimeSeries(data, 'receitas', 'receita_total')
+    if (receita.length > 0) {
+      series.push({
+        id: 'receita_total',
+        label: 'Receita Total',
+        description: 'Total de receitas arrecadadas pelo estado ao longo dos anos',
+        unit: 'R$',
+        source: 'SEFAZ/AC · SICONFI',
+        timeSeries: receita.map((p) => ({ year: p.year, value: p.value })),
+        color: '#d4a017',
+        chartType: 'area',
+        format: 'currency',
+      })
+    }
+
+    const despesa = getTimeSeries(data, 'despesas', 'despesa_total')
+    if (despesa.length > 0) {
+      series.push({
+        id: 'despesa_total',
+        label: 'Despesa Total',
+        description: 'Total de despesas realizadas pelo estado ao longo dos anos',
+        unit: 'R$',
+        source: 'SEFAZ/AC · SICONFI',
+        timeSeries: despesa.map((p) => ({ year: p.year, value: p.value })),
+        color: '#0f5b36',
+        chartType: 'area',
+        format: 'currency',
+      })
+    }
+
+    return series
+  }, [data])
+
   const funcaoChart = useMemo(() => {
     const funcaoData = getByMunicipio(data, 'despesas', 'despesa_funcao')
     return Object.entries(funcaoData)
@@ -58,59 +78,24 @@ function OrcamentoChartsComponent({ data }: OrcamentoChartsProps) {
   }, [data])
 
   return (
-    <>
-      {/* Receitas */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-        {receitaSeries.length > 0 && (
-          <ChartCard
-            title="Evolução da Receita Total"
-            subtitle="Receita total arrecadada pelo Estado do Acre"
-            source="SEFAZ/AC · SICONFI"
-          >
-            <LazyAreaChart data={receitaSeries} color="#0f5b36" height={260} format="currency" />
-          </ChartCard>
-        )}
-        {dualData.length > 0 && (
-          <ChartCard
-            title="Receita vs Despesa"
-            subtitle="Comparativo de evolução orçamentária"
-            source="SEFAZ/AC · SICONFI"
-          >
-            <DualAreaChart
-              data={dualData}
-              label1="Receita Total"
-              label2="Despesa Total"
-              color1="#d4a017"
-              color2="#0f5b36"
-              height={260}
-              format="currency"
-            />
-          </ChartCard>
-        )}
-      </div>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch">
+      {timeSeriesConfigs.length > 0 && (
+        <InteractiveTimeSeriesChart
+          series={timeSeriesConfigs}
+          defaultSelectedId={timeSeriesConfigs[0]?.id}
+        />
+      )}
 
-      {/* Despesas */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-        {despesaSeries.length > 0 && (
-          <ChartCard
-            title="Evolução da Despesa Total"
-            subtitle="Despesa total empenhada pelo Estado do Acre"
-            source="SEFAZ/AC · SICONFI"
-          >
-            <LazyAreaChart data={despesaSeries} color="#229157" height={260} format="currency" />
-          </ChartCard>
-        )}
-      </div>
       {funcaoChart.length > 0 && (
         <ChartCard
           title="Despesa por Função"
           subtitle="Distribuição das despesas por área de atuação — último exercício"
           source="SEFAZ/AC"
         >
-          <LazyBarChart data={funcaoChart} color="#229157" height={340} horizontal />
+          <LazyBarChart data={funcaoChart} color="#229157" height={360} horizontal />
         </ChartCard>
       )}
-    </>
+    </div>
   )
 }
 

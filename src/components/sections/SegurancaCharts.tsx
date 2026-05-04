@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react'
-import { ChartCard } from '@/components/charts/ChartCard'
-import { LazyLineChart } from '@/components/charts/LazyLineChart'
+import {
+  InteractiveTimeSeriesChart,
+  type TimeSeriesConfig,
+} from '@/components/charts/InteractiveTimeSeriesChart'
 import type { IndicatorSection } from '@/types/indicators'
 
 function getTimeSeries(
@@ -19,69 +21,75 @@ interface SegurancaChartsProps {
 }
 
 function SegurancaChartsComponent({ data }: SegurancaChartsProps) {
-  const homicidiosSeries = useMemo(
-    () => getTimeSeries(data, 'crimes_violentos', 'taxa_homicidios').map((p) => ({ year: p.year, value: p.value })),
-    [data],
-  )
-  const totalHomicidios = useMemo(
-    () => getTimeSeries(data, 'crimes_violentos', 'total_homicidios').map((p) => ({ year: p.year, value: p.value })),
-    [data],
-  )
-  const roubosSeries = useMemo(
-    () => getTimeSeries(data, 'crimes_patrimonio', 'taxa_roubos').map((p) => ({ year: p.year, value: p.value })),
-    [data],
-  )
-  const furtosSeries = useMemo(
-    () => getTimeSeries(data, 'crimes_patrimonio', 'taxa_furtos').map((p) => ({ year: p.year, value: p.value })),
-    [data],
-  )
+  const timeSeriesConfigs: TimeSeriesConfig[] = useMemo(() => {
+    const series: TimeSeriesConfig[] = []
+
+    const homicidios = getTimeSeries(data, 'crimes_violentos', 'taxa_homicidios')
+    if (homicidios.length > 0) {
+      series.push({
+        id: 'taxa_homicidios',
+        label: 'Taxa de Homicídios',
+        description: 'Número de homicídios dolosos por 100 mil habitantes',
+        unit: '/100 mil hab.',
+        source: 'SSP/AC · SENASP',
+        timeSeries: homicidios.map((p) => ({ year: p.year, value: p.value })),
+        color: '#C7392F',
+        chartType: 'line',
+      })
+    }
+
+    const totalHomicidios = getTimeSeries(data, 'crimes_violentos', 'total_homicidios')
+    if (totalHomicidios.length > 0) {
+      series.push({
+        id: 'total_homicidios',
+        label: 'Total de Homicídios',
+        description: 'Quantidade absoluta de homicídios dolosos registrados no estado',
+        unit: 'casos',
+        source: 'SSP/AC',
+        timeSeries: totalHomicidios.map((p) => ({ year: p.year, value: p.value })),
+        color: '#e67e22',
+        chartType: 'line',
+      })
+    }
+
+    const roubos = getTimeSeries(data, 'crimes_patrimonio', 'taxa_roubos')
+    if (roubos.length > 0) {
+      series.push({
+        id: 'taxa_roubos',
+        label: 'Taxa de Roubos',
+        description: 'Número de roubos por 100 mil habitantes',
+        unit: '/100 mil hab.',
+        source: 'SSP/AC · SINESP',
+        timeSeries: roubos.map((p) => ({ year: p.year, value: p.value })),
+        color: '#d4a017',
+        chartType: 'line',
+      })
+    }
+
+    const furtos = getTimeSeries(data, 'crimes_patrimonio', 'taxa_furtos')
+    if (furtos.length > 0) {
+      series.push({
+        id: 'taxa_furtos',
+        label: 'Taxa de Furtos',
+        description: 'Número de furtos por 100 mil habitantes',
+        unit: '/100 mil hab.',
+        source: 'SSP/AC · SINESP',
+        timeSeries: furtos.map((p) => ({ year: p.year, value: p.value })),
+        color: '#157244',
+        chartType: 'line',
+      })
+    }
+
+    return series
+  }, [data])
+
+  if (timeSeriesConfigs.length === 0) return null
 
   return (
-    <>
-      {/* Crimes Violentos */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-        {homicidiosSeries.length > 0 && (
-          <ChartCard
-            title="Taxa de Homicídios"
-            subtitle="Óbitos por causas externas por 100 mil hab."
-            source="SSP/AC · SENASP"
-          >
-            <LazyLineChart data={homicidiosSeries} color="#C7392F" unit="/100 mil hab." height={280} />
-          </ChartCard>
-        )}
-        {totalHomicidios.length > 0 && (
-          <ChartCard
-            title="Total de Homicídios"
-            subtitle="Número absoluto de homicídios dolosos registrados"
-            source="SSP/AC"
-          >
-            <LazyLineChart data={totalHomicidios} color="#e67e22" unit="casos" height={280} />
-          </ChartCard>
-        )}
-      </div>
-
-      {/* Crimes contra o Patrimônio */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-        {roubosSeries.length > 0 && (
-          <ChartCard
-            title="Taxa de Roubos"
-            subtitle="Registros de roubo por 100 mil habitantes"
-            source="SSP/AC · SINESP"
-          >
-            <LazyLineChart data={roubosSeries} color="#e67e22" unit="/100 mil hab." height={280} />
-          </ChartCard>
-        )}
-        {furtosSeries.length > 0 && (
-          <ChartCard
-            title="Taxa de Furtos"
-            subtitle="Registros de furto por 100 mil habitantes"
-            source="SSP/AC · SINESP"
-          >
-            <LazyLineChart data={furtosSeries} color="#d4a017" unit="/100 mil hab." height={280} />
-          </ChartCard>
-        )}
-      </div>
-    </>
+    <InteractiveTimeSeriesChart
+      series={timeSeriesConfigs}
+      defaultSelectedId={timeSeriesConfigs[0]?.id}
+    />
   )
 }
 

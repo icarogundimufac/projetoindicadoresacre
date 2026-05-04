@@ -9,6 +9,7 @@ import { GeoJSON, MapContainer, TileLayer, useMap } from 'react-leaflet'
 import { queryKeys, portalDataClient } from '@/lib/data/client'
 import type { MunicipioSummary } from '@/types/municipio'
 import { generateColorScale } from '@/lib/utils/color-scale'
+import { House } from 'lucide-react'
 import { MapLegend } from './MapLegend'
 
 export type MapColorScale = 'verde' | 'estrela' | 'heat' | 'azul' | 'roxo'
@@ -354,6 +355,14 @@ export function AcreMap({
     () => buildNormalizedSlugEntries(Array.from(valueByMunicipioSlug.keys())),
     [valueByMunicipioSlug],
   )
+  const geoJsonLayerKey = useMemo(() => {
+    const valueSignature = Array.from(valueByMunicipioSlug.entries())
+      .sort(([leftSlug], [rightSlug]) => leftSlug.localeCompare(rightSlug))
+      .map(([slug, value]) => `${slug}:${value}`)
+      .join('|')
+
+    return `${label}|${unit}|${colorScale}|${valueSignature}`
+  }, [colorScale, label, unit, valueByMunicipioSlug])
   const municipioNameBySlug = useMemo(() => {
     const map = new Map<string, string>()
 
@@ -363,6 +372,10 @@ export function AcreMap({
 
     return map
   }, [municipios])
+
+  useEffect(() => {
+    setHovered(null)
+  }, [geoJsonLayerKey])
 
   const styleFeature = (feature?: Feature): PathOptions => {
     const slug = resolveMunicipioSlug(feature, slugEntries, municipioAliasToSlug)
@@ -399,6 +412,11 @@ export function AcreMap({
       className="relative rounded-xl overflow-hidden border border-areia-200 shadow-sm bg-white"
       style={{ height }}
     >
+      <style>{`
+        .acre-path {
+          transition: fill 0.5s ease, fill-opacity 0.5s ease, stroke 0.3s ease, stroke-width 0.3s ease;
+        }
+      `}</style>
       {!isError && (
         <MapContainer
           center={ACRE_CENTER}
@@ -420,10 +438,17 @@ export function AcreMap({
             <>
               <FitToGeoJson geoJson={geoJson as GeoJsonObject} />
               <GeoJSON
+                key={geoJsonLayerKey}
                 ref={geoJsonLayerRef}
                 data={geoJson as GeoJsonObject}
                 style={(feature) => styleFeature(feature as Feature | undefined)}
                 onEachFeature={(feature, layer) => {
+                  const pathLayer = layer as L.Path
+                  const el = pathLayer.getElement()
+                  if (el) {
+                    el.classList.add('acre-path')
+                  }
+
                   layer.on({
                     mouseover: (event) => {
                       const target = event.target as L.Path
@@ -472,7 +497,7 @@ export function AcreMap({
             title="Recentrar mapa"
             className="inline-flex items-center justify-center rounded-full border border-white/80 bg-white h-10 w-10 text-verde-900 shadow-md transition hover:bg-areia-50 font-jakarta"
           >
-            <span className="text-lg leading-none">⌂</span>
+            <House className="h-4 w-4" />
           </button>
         </div>
       )}

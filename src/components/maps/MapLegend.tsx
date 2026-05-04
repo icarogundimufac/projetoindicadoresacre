@@ -1,4 +1,6 @@
 import { formatNumber } from '@/lib/utils/format'
+import { cn } from '@/lib/utils/cn'
+import { useMemo } from 'react'
 
 interface MapLegendProps {
   min: number
@@ -19,24 +21,52 @@ export function MapLegend({
 }: MapLegendProps) {
   const gradient = `linear-gradient(to right, ${colors.join(', ')})`
 
+  const breakPoints = useMemo(() => {
+    if (min === max) return [{ value: min, offset: 0 }]
+    const range = max - min
+    return colors.map((_, i) => {
+      const offset = i / (colors.length - 1)
+      return { value: min + offset * range, offset }
+    })
+  }, [min, max, colors])
+
   return (
-    <div className="bg-white/95 backdrop-blur-sm rounded-lg px-3 py-2.5 shadow-md border border-areia-200 min-w-[140px]">
+    <div className="bg-white/95 backdrop-blur-sm rounded-xl px-4 py-3 shadow-lg border border-areia-200 min-w-[180px] max-w-[240px] space-y-3">
       {label && (
-        <p className="text-[10px] font-semibold text-areia-600 font-jakarta uppercase tracking-widest mb-2">
-          {label}
-        </p>
+        <div className="space-y-0.5">
+          <p className="text-[11px] font-bold text-verde-900 font-jakarta uppercase tracking-[0.12em] leading-tight">
+            {label}
+          </p>
+        </div>
       )}
-      <div
-        className="h-2.5 rounded-full mb-1.5"
-        style={{ background: gradient }}
-      />
-      <div className="flex justify-between">
-        <span className="text-[10px] text-areia-500 font-jakarta tabular-nums">
-          {formatNumber(min)}{unit ? ` ${unit}` : ''}
-        </span>
-        <span className="text-[10px] text-areia-500 font-jakarta tabular-nums">
-          {formatNumber(max)}{unit ? ` ${unit}` : ''}
-        </span>
+
+      <div className="space-y-2">
+        <div
+          className="h-2 rounded-full"
+          style={{ background: gradient }}
+        />
+
+        <div className="flex justify-between">
+          {breakPoints.map((point, i) => (
+            <span
+              key={point.value}
+              className={cn(
+                'text-[10px] font-jakarta tabular-nums leading-none',
+                i === 0 || i === breakPoints.length - 1
+                  ? 'text-areia-600 font-semibold'
+                  : 'text-areia-400',
+              )}
+            >
+              {formatNumber(point.value)}
+            </span>
+          ))}
+        </div>
+
+        {unit && (
+          <p className="text-[10px] text-areia-500 font-jakarta text-center leading-none">
+            {unit}
+          </p>
+        )}
       </div>
     </div>
   )

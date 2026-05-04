@@ -1,8 +1,10 @@
 import React, { useMemo } from 'react'
 import { ChartCard } from '@/components/charts/ChartCard'
-import { LazyLineChart } from '@/components/charts/LazyLineChart'
+import {
+  InteractiveTimeSeriesChart,
+  type TimeSeriesConfig,
+} from '@/components/charts/InteractiveTimeSeriesChart'
 import { LazyBarChart } from '@/components/charts/LazyBarChart'
-import { DualLineChart } from '@/components/charts/DualLineChart'
 import type { IndicatorSection } from '@/types/indicators'
 
 function getTimeSeries(
@@ -36,22 +38,82 @@ interface EducacaoChartsProps {
 }
 
 function EducacaoChartsComponent({ data }: EducacaoChartsProps) {
-  const matriculasSeries = useMemo(
-    () => getTimeSeries(data, 'matriculas', 'matriculas_total').map((p) => ({ year: p.year, value: p.value })),
-    [data],
-  )
-  const infantilSeries = useMemo(
-    () => getTimeSeries(data, 'matriculas', 'matriculas_educacao_infantil').map((p) => ({ year: p.year, value: p.value })),
-    [data],
-  )
-  const idebIniciais = useMemo(
-    () => getTimeSeries(data, 'desempenho', 'ideb_anos_iniciais').map((p) => ({ year: p.year, value: p.value })),
-    [data],
-  )
-  const idebFinais = useMemo(
-    () => getTimeSeries(data, 'desempenho', 'ideb_anos_finais').map((p) => ({ year: p.year, value: p.value })),
-    [data],
-  )
+  const timeSeriesConfigs: TimeSeriesConfig[] = useMemo(() => {
+    const series: TimeSeriesConfig[] = []
+
+    const matriculasTotal = getTimeSeries(data, 'matriculas', 'matriculas_total')
+    if (matriculasTotal.length > 0) {
+      series.push({
+        id: 'matriculas_total',
+        label: 'Total de Matrículas',
+        description: 'Evolução do número total de matrículas no ensino fundamental e médio',
+        unit: 'alunos',
+        source: 'INEP/Censo Escolar',
+        timeSeries: matriculasTotal.map((p) => ({ year: p.year, value: p.value })),
+        color: '#157244',
+        chartType: 'line',
+      })
+    }
+
+    const matriculasInfantil = getTimeSeries(data, 'matriculas', 'matriculas_educacao_infantil')
+    if (matriculasInfantil.length > 0) {
+      series.push({
+        id: 'matriculas_educacao_infantil',
+        label: 'Educação Infantil',
+        description: 'Matrículas em creches e pré-escolas no estado',
+        unit: 'alunos',
+        source: 'INEP/Censo Escolar',
+        timeSeries: matriculasInfantil.map((p) => ({ year: p.year, value: p.value })),
+        color: '#44b375',
+        chartType: 'line',
+      })
+    }
+
+    const idebIniciais = getTimeSeries(data, 'desempenho', 'ideb_anos_iniciais')
+    if (idebIniciais.length > 0) {
+      series.push({
+        id: 'ideb_anos_iniciais',
+        label: 'IDEB — Anos Iniciais',
+        description: 'Índice de Desenvolvimento da Educação Básica para o 1º ao 5º ano',
+        unit: 'pontos',
+        source: 'INEP/MEC',
+        timeSeries: idebIniciais.map((p) => ({ year: p.year, value: p.value })),
+        color: '#229157',
+        chartType: 'line',
+      })
+    }
+
+    const idebFinais = getTimeSeries(data, 'desempenho', 'ideb_anos_finais')
+    if (idebFinais.length > 0) {
+      series.push({
+        id: 'ideb_anos_finais',
+        label: 'IDEB — Anos Finais',
+        description: 'Índice de Desenvolvimento da Educação Básica para o 6º ao 9º ano',
+        unit: 'pontos',
+        source: 'INEP/MEC',
+        timeSeries: idebFinais.map((p) => ({ year: p.year, value: p.value })),
+        color: '#F2C230',
+        chartType: 'line',
+      })
+    }
+
+    const analfabetismo = getTimeSeries(data, 'alfabetizacao', 'taxa_analfabetismo')
+    if (analfabetismo.length > 0) {
+      series.push({
+        id: 'taxa_analfabetismo',
+        label: 'Taxa de Analfabetismo',
+        description: 'Percentual da população com 15 anos ou mais que não sabe ler nem escrever',
+        unit: '%',
+        source: 'IBGE/PNAD',
+        timeSeries: analfabetismo.map((p) => ({ year: p.year, value: p.value })),
+        color: '#C7392F',
+        chartType: 'line',
+      })
+    }
+
+    return series
+  }, [data])
+
   const municipioChartData = useMemo(() => {
     const municipioIdeb = getByMunicipio(data, 'desempenho', 'ideb_municipios')
     return Object.entries(municipioIdeb)
@@ -62,93 +124,24 @@ function EducacaoChartsComponent({ data }: EducacaoChartsProps) {
       .sort((left, right) => right.value - left.value)
       .slice(0, 10)
   }, [data])
-  const dualIdebData = useMemo(() => {
-    return idebIniciais.map((p) => {
-      const finaisPoint = idebFinais.find((f) => f.year === p.year)
-      return {
-        year: p.year,
-        value1: p.value,
-        value2: finaisPoint?.value ?? 0,
-      }
-    })
-  }, [idebIniciais, idebFinais])
-  const analfabetismo = useMemo(
-    () => getTimeSeries(data, 'alfabetizacao', 'taxa_analfabetismo').map((p) => ({ year: p.year, value: p.value })),
-    [data],
-  )
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-      {matriculasSeries.length > 0 && (
-        <ChartCard
-          title="Total de Matrículas"
-          subtitle="Educação básica pública — rede estadual e municipal"
-          source="INEP/Censo Escolar"
-        >
-          <LazyLineChart data={matriculasSeries} color="#157244" unit="alunos" height={260} />
-        </ChartCard>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch">
+      {timeSeriesConfigs.length > 0 && (
+        <InteractiveTimeSeriesChart
+          series={timeSeriesConfigs}
+          defaultSelectedId={timeSeriesConfigs[0]?.id}
+        />
       )}
-      {infantilSeries.length > 0 && (
-        <ChartCard
-          title="Matrículas — Educação Infantil"
-          subtitle="Creche e pré-escola"
-          source="INEP/Censo Escolar"
-        >
-          <LazyLineChart data={infantilSeries} color="#44b375" unit="alunos" height={260} />
-        </ChartCard>
-      )}
-      {idebIniciais.length > 0 && (
-        <ChartCard
-          title="Evolução do IDEB — Anos Iniciais"
-          subtitle="Média estadual do Índice de Desenvolvimento da Educação Básica"
-          source="INEP/MEC"
-        >
-          <LazyLineChart
-            data={idebIniciais}
-            color="#157244"
-            unit="pontos"
-            height={260}
-            referenceValue={6}
-            referenceLabel="Meta 6.0"
-          />
-        </ChartCard>
-      )}
-      {dualIdebData.length > 0 && (
-        <ChartCard
-          title="Comparação IDEB"
-          subtitle="Anos Iniciais vs Anos Finais do ensino fundamental"
-          source="INEP/MEC"
-        >
-          <DualLineChart
-            data={dualIdebData}
-            label1="Anos Iniciais"
-            label2="Anos Finais"
-            color1="#157244"
-            color2="#44b375"
-            unit="pts"
-            height={260}
-          />
-        </ChartCard>
-      )}
-      {analfabetismo.length > 0 && (
-        <ChartCard
-          title="Taxa de Analfabetismo"
-          subtitle="População de 15 anos ou mais que não sabe ler nem escrever"
-          source="IBGE/PNAD"
-        >
-          <LazyLineChart data={analfabetismo} color="#C7392F" unit="%" height={260} />
-        </ChartCard>
-      )}
+
       {municipioChartData.length > 0 && (
-        <div className="lg:col-span-3">
-          <ChartCard
-            title="IDEB por Município — Anos Iniciais (2023)"
-            subtitle="10 municípios com maior índice"
-            source="INEP/MEC"
-          >
-            <LazyBarChart data={municipioChartData} color="#229157" unit="pontos" height={340} horizontal />
-          </ChartCard>
-        </div>
+        <ChartCard
+          title="IDEB por Município — Anos Iniciais (2023)"
+          subtitle="10 municípios com maior índice"
+          source="INEP/MEC"
+        >
+          <LazyBarChart data={municipioChartData} color="#229157" unit="pontos" height={360} horizontal />
+        </ChartCard>
       )}
     </div>
   )

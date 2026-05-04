@@ -20,17 +20,18 @@ export function ChartCard({
   return (
     <div
       className={cn(
-        'overflow-hidden rounded-2xl border border-areia-200 bg-white shadow-sm animate-fade-in dark:bg-[#4a5546] dark:border-white/12',
+        'rounded-2xl border border-areia-200 bg-white shadow-sm animate-fade-in dark:bg-[#4a5546] dark:border-white/12',
         className,
       )}
     >
       <div className="flex items-start justify-between gap-4 border-b border-areia-100 px-6 pt-5 pb-4">
         <div className="min-w-0">
-          <h3 className="text-sm font-semibold text-verde-900 font-fraunces">
+          <h3 className="flex items-center gap-2 text-base font-bold text-verde-900 font-fraunces">
+            <span className="h-5 w-1 rounded-full bg-verde-700" />
             {title}
           </h3>
           {subtitle && (
-            <p className="mt-0.5 text-xs leading-relaxed text-areia-400 font-jakarta">
+            <p className="mt-1 text-xs leading-relaxed text-areia-400 font-jakarta">
               {subtitle}
             </p>
           )}
@@ -38,7 +39,7 @@ export function ChartCard({
         {action && <div className="flex-shrink-0">{action}</div>}
       </div>
 
-      <div className="p-6">{children}</div>
+      <div className="overflow-hidden p-6">{children}</div>
 
       {source && (
         <div className="border-t border-areia-100 px-6 py-3 bg-areia-50/40 dark:bg-white/5">

@@ -1,8 +1,10 @@
 import React, { useMemo } from 'react'
 import { ChartCard } from '@/components/charts/ChartCard'
-import { LazyLineChart } from '@/components/charts/LazyLineChart'
+import {
+  InteractiveTimeSeriesChart,
+  type TimeSeriesConfig,
+} from '@/components/charts/InteractiveTimeSeriesChart'
 import { LazyBarChart } from '@/components/charts/LazyBarChart'
-import { DualLineChart } from '@/components/charts/DualLineChart'
 import type { IndicatorSection } from '@/types/indicators'
 
 function getTimeSeries(
@@ -36,28 +38,68 @@ interface SaudeChartsProps {
 }
 
 function SaudeChartsComponent({ data }: SaudeChartsProps) {
-  const mortalidadeInfantil = useMemo(
-    () => getTimeSeries(data, 'mortalidade', 'mortalidade_infantil').map((p) => ({ year: p.year, value: p.value })),
-    [data],
-  )
-  const mortalidadeMaterna = useMemo(
-    () => getTimeSeries(data, 'mortalidade', 'mortalidade_materna').map((p) => ({ year: p.year, value: p.value })),
-    [data],
-  )
-  const dualData = useMemo(() => {
-    return mortalidadeInfantil.map((p) => {
-      const maternaPoint = mortalidadeMaterna.find((m) => m.year === p.year)
-      return {
-        year: p.year,
-        value1: p.value,
-        value2: maternaPoint?.value ?? 0,
-      }
-    })
-  }, [mortalidadeInfantil, mortalidadeMaterna])
-  const vacinacao = useMemo(
-    () => getTimeSeries(data, 'prevencao', 'cobertura_vacinacao').map((p) => ({ year: p.year, value: p.value })),
-    [data],
-  )
+  const timeSeriesConfigs: TimeSeriesConfig[] = useMemo(() => {
+    const series: TimeSeriesConfig[] = []
+
+    const mortalidadeInfantil = getTimeSeries(data, 'mortalidade', 'mortalidade_infantil')
+    if (mortalidadeInfantil.length > 0) {
+      series.push({
+        id: 'mortalidade_infantil',
+        label: 'Mortalidade Infantil',
+        description: 'Óbitos de crianças menores de 1 ano por mil nascidos vivos',
+        unit: '/1.000 NV',
+        source: 'SIM/DATASUS',
+        timeSeries: mortalidadeInfantil.map((p) => ({ year: p.year, value: p.value })),
+        color: '#C7392F',
+        chartType: 'line',
+      })
+    }
+
+    const mortalidadeMaterna = getTimeSeries(data, 'mortalidade', 'mortalidade_materna')
+    if (mortalidadeMaterna.length > 0) {
+      series.push({
+        id: 'mortalidade_materna',
+        label: 'Mortalidade Materna',
+        description: 'Óbitos de mulheres por causas relacionadas à gestação por 100 mil habitantes',
+        unit: '/100 mil hab.',
+        source: 'SIM/DATASUS',
+        timeSeries: mortalidadeMaterna.map((p) => ({ year: p.year, value: p.value })),
+        color: '#e67e22',
+        chartType: 'line',
+      })
+    }
+
+    const vacinacao = getTimeSeries(data, 'prevencao', 'cobertura_vacinacao')
+    if (vacinacao.length > 0) {
+      series.push({
+        id: 'cobertura_vacinacao',
+        label: 'Cobertura Vacinal',
+        description: 'Percentual da população-alvo vacinada conforme calendário nacional',
+        unit: '%',
+        source: 'PNI/DATASUS',
+        timeSeries: vacinacao.map((p) => ({ year: p.year, value: p.value })),
+        color: '#229157',
+        chartType: 'line',
+      })
+    }
+
+    const leitos = getTimeSeries(data, 'atencao_basica', 'leitos_sus')
+    if (leitos.length > 0) {
+      series.push({
+        id: 'leitos_sus',
+        label: 'Leitos SUS',
+        description: 'Quantidade de leitos disponíveis pelo SUS por mil habitantes',
+        unit: '/1.000 hab.',
+        source: 'CNES/DATASUS',
+        timeSeries: leitos.map((p) => ({ year: p.year, value: p.value })),
+        color: '#157244',
+        chartType: 'line',
+      })
+    }
+
+    return series
+  }, [data])
+
   const coberturaChart = useMemo(() => {
     const coberturaData = getByMunicipio(data, 'atencao_basica', 'cobertura_ab')
     return Object.entries(coberturaData)
@@ -68,85 +110,26 @@ function SaudeChartsComponent({ data }: SaudeChartsProps) {
       .sort((left, right) => right.value - left.value)
       .slice(0, 10)
   }, [data])
-  const leitos = useMemo(
-    () => getTimeSeries(data, 'atencao_basica', 'leitos_sus').map((p) => ({ year: p.year, value: p.value })),
-    [data],
-  )
 
   return (
-    <>
-      {/* Mortalidade */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-        {mortalidadeInfantil.length > 0 && (
-          <ChartCard
-            title="Taxa de Mortalidade Infantil"
-            subtitle="Óbitos por 1.000 nascidos vivos"
-            source="SIM/DATASUS"
-          >
-            <LazyLineChart data={mortalidadeInfantil} color="#C7392F" unit="/1.000 NV" height={260} />
-          </ChartCard>
-        )}
-        {dualData.length > 0 && (
-          <ChartCard
-            title="Comparação de Mortalidade"
-            subtitle="Infantil vs Materna — tendência estadual"
-            source="SIM/DATASUS"
-          >
-            <DualLineChart
-              data={dualData}
-              label1="Mortalidade Infantil"
-              label2="Mortalidade Materna"
-              color1="#C7392F"
-              color2="#e67e22"
-              unit=""
-              height={260}
-            />
-          </ChartCard>
-        )}
-      </div>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch">
+      {timeSeriesConfigs.length > 0 && (
+        <InteractiveTimeSeriesChart
+          series={timeSeriesConfigs}
+          defaultSelectedId={timeSeriesConfigs[0]?.id}
+        />
+      )}
 
-      {/* Prevenção */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-        {vacinacao.length > 0 && (
-          <ChartCard
-            title="Cobertura Vacinal"
-            subtitle="Cobertura vacinal média do calendário básico (%)"
-            source="PNI/DATASUS"
-          >
-            <LazyLineChart
-              data={vacinacao}
-              color="#229157"
-              unit="%"
-              height={260}
-              referenceValue={95}
-              referenceLabel="Meta 95%"
-            />
-          </ChartCard>
-        )}
-      </div>
-
-      {/* Atenção Básica */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-        {coberturaChart.length > 0 && (
-          <ChartCard
-            title="Cobertura de Atenção Básica por Município (%)"
-            subtitle="Percentual de cobertura pelas equipes de saúde da família"
-            source="CNES/DATASUS"
-          >
-            <LazyBarChart data={coberturaChart} color="#229157" unit="%" height={300} />
-          </ChartCard>
-        )}
-        {leitos.length > 0 && (
-          <ChartCard
-            title="Leitos SUS"
-            subtitle="Número de leitos hospitalares do SUS por 1.000 habitantes"
-            source="CNES/DATASUS"
-          >
-            <LazyLineChart data={leitos} color="#157244" unit="/1.000 hab." height={260} />
-          </ChartCard>
-        )}
-      </div>
-    </>
+      {coberturaChart.length > 0 && (
+        <ChartCard
+          title="Cobertura de Atenção Básica por Município (%)"
+          subtitle="Percentual de cobertura pelas equipes de saúde da família"
+          source="CNES/DATASUS"
+        >
+          <LazyBarChart data={coberturaChart} color="#229157" unit="%" height={360} />
+        </ChartCard>
+      )}
+    </div>
   )
 }
 

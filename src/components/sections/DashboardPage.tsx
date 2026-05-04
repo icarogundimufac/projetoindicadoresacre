@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Map, Layers, CalendarDays, Palette, ChevronDown } from 'lucide-react'
 import { Header } from '@/components/layout/Header'
 import { PageShell, PageContent } from '@/components/layout/PageShell'
 import { SectionSummary } from '@/components/dashboard/SectionSummary'
+import { AnimatedSelect } from '@/components/ui/AnimatedSelect'
 import { KpiLedgerRow } from '@/components/dashboard/KpiLedgerRow'
 import {
   AcreMap,
@@ -15,6 +17,7 @@ import {
 } from '@/lib/data/portal-data'
 import { SECTIONS } from '@/lib/constants/sections'
 import { isIndicatorSectionId } from '@/lib/constants/indicator-sections'
+import { cn } from '@/lib/utils/cn'
 import type { PortalDataBundle, MapVariableOption } from '@/types/admin-data'
 import type { DashboardData } from '@/types/dashboard'
 
@@ -69,7 +72,8 @@ export function DashboardPage({ data, bundle, variableOptions }: DashboardPagePr
     if (!preferred.years.includes(selectedYear)) {
       setSelectedYear(preferred.years[preferred.years.length - 1] ?? 0)
     }
-  }, [selectedVariableKey, selectedYear, variableOptions])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedVariableKey, variableOptions])
 
   const mapData = useMemo(
     () =>
@@ -120,91 +124,117 @@ export function DashboardPage({ data, bundle, variableOptions }: DashboardPagePr
 
       <PageContent>
         <section className="mb-8">
-          <div className="flex flex-col gap-5 xl:flex-row xl:items-start">
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-stretch">
             <div className="xl:flex-[2] min-w-0 bg-white rounded-xl border border-areia-200 shadow-sm overflow-hidden dark:bg-[#4a5546] dark:border-white/12">
-              <div className="px-5 py-3 border-b border-areia-100 flex items-center justify-between gap-3">
-                <p className="text-sm font-semibold text-areia-800 font-jakarta shrink-0">
-                  Mapa do Estado do Acre
-                </p>
+              <div className="h-1 bg-gradient-to-r from-verde-400 via-verde-300 to-verde-400" />
 
-                <div className="flex items-center gap-2 min-w-0">
-                  <select
-                    value={selectedVariableKey}
-                    onChange={(event) => setSelectedVariableKey(event.currentTarget.value)}
-                    className="min-w-0 max-w-[260px] truncate rounded-lg border border-areia-200 bg-areia-50/60 px-2.5 py-1 text-[12px] text-areia-700 font-jakarta transition hover:border-areia-300 focus:border-verde-400 focus:ring-1 focus:ring-verde-400/30 focus:outline-none"
-                  >
-                    {optionsBySection.map((group) => (
-                      <optgroup key={group.label} label={group.label}>
-                        {group.options.map((option) => (
-                          <option key={option.key} value={option.key}>
-                            {option.indicatorLabel}
-                          </option>
-                        ))}
-                      </optgroup>
-                    ))}
-                  </select>
+              {/* ── Compact header bar ── */}
+              <div className="px-4 py-3 border-b border-areia-100 dark:border-white/10">
+                <div className="flex flex-col lg:flex-row lg:items-center gap-3 justify-between">
+                  {/* Title */}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-verde-600 shadow-md ring-2 ring-verde-200 dark:bg-verde-500 dark:ring-verde-800">
+                      <Map size={18} className="text-white" />
+                    </div>
+                    {selectedVariable && (
+                      <div
+                        key={selectedVariableKey}
+                        className="min-w-0 animate-fade-in motion-reduce:animate-none"
+                      >
+                        <p className="text-[18px] font-bold text-verde-950 dark:text-white font-fraunces leading-snug truncate tracking-tight">
+                          {selectedVariable.indicatorLabel}
+                        </p>
+                        <p className="text-[10px] text-areia-500 dark:text-areia-400 font-jakarta truncate">
+                          Fonte: {selectedVariable.source}
+                        </p>
+                      </div>
+                    )}
+                  </div>
 
-                  <select
-                    value={selectedYear}
-                    onChange={(event) => setSelectedYear(Number(event.currentTarget.value))}
-                    className="w-[72px] rounded-lg border border-areia-200 bg-areia-50/60 px-2 py-1 text-[12px] text-areia-700 font-jakarta tabular-nums transition hover:border-areia-300 focus:border-verde-400 focus:ring-1 focus:ring-verde-400/30 focus:outline-none"
-                  >
-                    {(selectedVariable?.years ?? []).map((year) => (
-                      <option key={year} value={year}>
-                        {year}
-                      </option>
-                    ))}
-                  </select>
+                  {/* Controls */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {/* Indicator select — animated custom dropdown */}
+                    <AnimatedSelect
+                      value={selectedVariableKey}
+                      onChange={setSelectedVariableKey}
+                      groups={optionsBySection.map((group) => ({
+                        label: group.label,
+                        options: group.options.map((option) => ({
+                          key: option.key,
+                          label: option.indicatorLabel,
+                        })),
+                      }))}
+                      icon={<Layers size={10} />}
+                      className="min-w-0 w-[240px]"
+                    />
 
-                  <select
-                    value={colorScale}
-                    onChange={(event) =>
-                      handleColorScaleChange(event.currentTarget.value as MapColorScale)
-                    }
-                    aria-label="Paleta de cores do mapa"
-                    className="rounded-lg border border-areia-200 bg-areia-50/60 px-2.5 py-1 text-[12px] text-areia-700 font-jakarta transition hover:border-areia-300 focus:border-verde-400 focus:ring-1 focus:ring-verde-400/30 focus:outline-none"
-                  >
-                    {MAP_COLOR_SCALES.map((scale) => (
-                      <option key={scale} value={scale}>
-                        {MAP_COLOR_SCALE_LABELS[scale]}
-                      </option>
-                    ))}
-                  </select>
+                    {/* Year select — animated custom dropdown */}
+                    <AnimatedSelect
+                      value={String(selectedYear)}
+                      onChange={(val) => setSelectedYear(Number(val))}
+                      groups={[
+                        {
+                          label: 'Ano',
+                          options: (selectedVariable?.years ?? []).map((year) => ({
+                            key: String(year),
+                            label: String(year),
+                          })),
+                        },
+                      ]}
+                      icon={<CalendarDays size={10} />}
+                      className="w-[120px]"
+                    />
 
-                  {selectedVariable && (
-                    <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border border-[#F2C230]/40 bg-[#F2C230]/10 text-[#1F6B3A] font-jakarta shrink-0 whitespace-nowrap">
-                      Fonte: {selectedVariable.source}
-                    </span>
-                  )}
+                    {/* Palette select — animated custom dropdown */}
+                    <AnimatedSelect<MapColorScale>
+                      value={colorScale}
+                      onChange={handleColorScaleChange}
+                      groups={[
+                        {
+                          label: 'Paleta',
+                          options: MAP_COLOR_SCALES.map((scale) => ({
+                            key: scale,
+                            label: MAP_COLOR_SCALE_LABELS[scale],
+                          })),
+                        },
+                      ]}
+                      icon={<Palette size={10} />}
+                      className="w-[120px]"
+                    />
+                  </div>
                 </div>
               </div>
-              <AcreMap
-                dataByMunicipio={mapData.dataByMunicipio}
-                unit={mapData.unit}
-                label={mapData.label}
-                colorScale={colorScale}
-                height={460}
-              />
+
+              {/* Map with crossfade animation */}
+              <div
+                key={`${selectedVariableKey}-${selectedYear}-${colorScale}`}
+                className="animate-fade-in motion-reduce:animate-none"
+              >
+                <AcreMap
+                  dataByMunicipio={mapData.dataByMunicipio}
+                  unit={mapData.unit}
+                  label={mapData.label}
+                  colorScale={colorScale}
+                  height={460}
+                />
+              </div>
             </div>
 
             {data?.kpis && data.kpis.length > 0 && (
-              <div className="xl:flex-[1] min-w-0 rounded-xl border border-areia-200 bg-white shadow-sm overflow-hidden xl:sticky xl:top-6 dark:bg-[#4a5546] dark:border-white/12">
+              <div className="xl:flex-[1] min-w-0 rounded-xl border border-areia-200 bg-white shadow-sm overflow-hidden xl:sticky xl:top-6 xl:flex xl:flex-col dark:bg-[#4a5546] dark:border-white/12">
                 <div className="h-1 bg-gradient-to-r from-ouro-400 via-ouro-300 to-ouro-400" />
                 <div className="border-b border-areia-200 px-4 py-3">
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-verde-700 font-jakarta">
                       Indicadores-chave
                     </p>
-                    <span className="rounded-md border border-verde-100 bg-verde-50 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.1em] text-verde-700 font-jakarta">
-                      {data.kpis.length} itens
-                    </span>
                   </div>
                   <p className="mt-1 text-[11px] text-areia-500 font-jakarta">
                     Principais metricas para leitura rapida.
                   </p>
                 </div>
 
-                <div className="px-3 py-3">
+                <div className="flex-1 px-3 py-3">
                   <ul className="space-y-2">
                     {data.kpis.map((kpi) => (
                       <KpiLedgerRow
@@ -215,7 +245,7 @@ export function DashboardPage({ data, bundle, variableOptions }: DashboardPagePr
                   </ul>
                 </div>
 
-                <div className="border-t border-areia-200 px-4 py-2 bg-areia-50/50">
+                <div className="mt-auto border-t border-areia-200 px-4 py-2 bg-areia-50/50">
                   <p className="text-[9px] text-areia-400 font-jakarta tracking-wide">
                     {data.lastUpdated && `Atualizado em ${new Date(data.lastUpdated).toLocaleDateString('pt-BR')}`}
                   </p>
