@@ -1,285 +1,214 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Map, Layers, CalendarDays, Palette } from 'lucide-react'
-import { AnimatedSelect } from '@/components/ui/AnimatedSelect'
+'use client'
+
+import { useState, useEffect, useMemo } from 'react'
+import { useOutletContext } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { MapaSkeleton } from '@/components/sections/IndicadoresMapa/components/MapaSkeleton'
+import { PainelMunicipal } from '@/components/sections/IndicadoresMapa/components/PainelMunicipal'
+import { PainelMapa } from '@/components/sections/IndicadoresMapa/components/PainelMapa'
+import { PainelMunicipioInfo } from '@/components/sections/IndicadoresMapa/components/PainelMunicipioInfo'
 import {
-  AcreMap,
-  MAP_COLOR_PALETTES,
-  MAP_COLOR_SCALE_LABELS,
-  type MapColorScale,
-} from '@/components/maps/AcreMap'
-import { getIndicatorMapSeries, getSectionFallbackMapYear } from '@/lib/data/portal-data'
-import type { IndicatorSectionId } from '@/lib/constants/indicator-sections'
-import type { IndicatorSection, Indicator } from '@/types/indicators'
+  DEFAULT_MAP_VARIABLE_KEY,
+  getMapVariableOptions,
+  getMapVariableData,
+} from '@/lib/data/portal-data'
+import { getMunicipioDashboardData, getAllMunicipioOptions } from '@/lib/data/municipio-dashboard'
+import type { IndicadoresOutletContext } from '@/components/layout/IndicadoresLayout'
+import type { MapColorScale } from '@/components/maps/AcreMap'
+import { MAP_COLOR_PALETTES } from '@/components/maps/AcreMap'
 
-
-interface IndicadoresMapaProps {
-  activeSectionId: IndicatorSectionId
-  data: Record<IndicatorSectionId, IndicatorSection | null>
-  isLoading: boolean
-}
-
-interface MapEnabledIndicator {
-  indicator: Indicator
-  groupId: string
-  groupLabel: string
-  availableYears: number[]
-}
-
+const STORAGE_KEY = 'portal:municipio-dashboard:selectedSlug'
+const DEFAULT_SLUG = 'rio-branco'
+const MAP_COLOR_SCALE_STORAGE_KEY = 'portal:municipio-dashboard:mapColorScale'
 const MAP_COLOR_SCALES = Object.keys(MAP_COLOR_PALETTES) as MapColorScale[]
 
-function isMapEnabled(indicator: Indicator): boolean {
-  if (indicator.mapSeries && Object.keys(indicator.mapSeries).length > 0) {
-    const hasData = Object.values(indicator.mapSeries).some(
-      (yearData) => Object.keys(yearData).length > 0,
-    )
-    if (hasData) return true
-  }
-
-  if (indicator.byMunicipio && Object.keys(indicator.byMunicipio).length > 0) {
-    return true
-  }
-
-  return false
-}
-
-function getAvailableYears(indicator: Indicator, fallbackYear: number): number[] {
-  const mapSeries = getIndicatorMapSeries(indicator, fallbackYear)
-
-  if (!mapSeries) return []
-
-  return Object.keys(mapSeries)
-    .map(Number)
-    .sort((a, b) => a - b)
-}
-
-export function IndicadoresMapa({
-  activeSectionId,
-  data,
-  isLoading,
-}: IndicadoresMapaProps) {
-  const sectionData = data[activeSectionId]
-
-  const fallbackYear = useMemo(() => {
-    if (!sectionData) return new Date().getFullYear()
-    return getSectionFallbackMapYear(sectionData)
-  }, [sectionData])
-
-  const mapEnabledIndicators = useMemo((): MapEnabledIndicator[] => {
-    if (!sectionData) return []
-
-    const indicators: MapEnabledIndicator[] = []
-
-    for (const group of sectionData.groups) {
-      for (const indicator of group.indicators) {
-        if (isMapEnabled(indicator)) {
-          const availableYears = getAvailableYears(indicator, fallbackYear)
-          if (availableYears.length > 0) {
-            indicators.push({
-              indicator,
-              groupId: group.id,
-              groupLabel: group.label,
-              availableYears,
-            })
-          }
-        }
-      }
+function readPersistedColorScale(): MapColorScale {
+  try {
+    const value = localStorage.getItem(MAP_COLOR_SCALE_STORAGE_KEY)
+    if (value && (MAP_COLOR_SCALES as string[]).includes(value)) {
+      return value as MapColorScale
     }
+  } catch {}
+  return 'verde'
+}
 
-    return indicators
-  }, [sectionData, fallbackYear])
+export function IndicadoresMapa() {
+  const { data: sectionData, isLoading: isLoadingSections } = useOutletContext<IndicadoresOutletContext>()
 
-  const [selectedIndicatorKey, setSelectedIndicatorKey] = useState<string>('')
-  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
+  const [selectedSlug, setSelectedSlug] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem(STORAGE_KEY)
+      if (stored) return stored
+    }
+    return DEFAULT_SLUG
+  })
+
+  const [showEstadual, setShowEstadual] = useState(false)
+  const [showSatellite, setShowSatellite] = useState(true)
+
+  // Map indicator selection
+  const [selectedVariableKey, setSelectedVariableKey] = useState(DEFAULT_MAP_VARIABLE_KEY)
+  const [selectedYear, setSelectedYear] = useState(2023)
+  const [colorScale, setColorScale] = useState<MapColorScale>(readPersistedColorScale)
+
+  const handleColorScaleChange = (scale: MapColorScale) => {
+    setColorScale(scale)
+    try {
+      localStorage.setItem(MAP_COLOR_SCALE_STORAGE_KEY, scale)
+    } catch {}
+  }
 
   useEffect(() => {
-    if (mapEnabledIndicators.length > 0) {
-      const first = mapEnabledIndicators[0]
-      setSelectedIndicatorKey(first.indicator.id)
-      setSelectedYear(first.availableYears[first.availableYears.length - 1])
-    } else {
-      setSelectedIndicatorKey('')
-      setSelectedYear(new Date().getFullYear())
-    }
-  }, [activeSectionId, mapEnabledIndicators])
+    localStorage.setItem(STORAGE_KEY, selectedSlug)
+  }, [selectedSlug])
 
-  const [colorScale, setColorScale] = useState<MapColorScale>('verde')
+  const { data: municipioOptions = [], isLoading: isLoadingOptions } = useQuery({
+    queryKey: ['municipios-options'],
+    queryFn: getAllMunicipioOptions,
+  })
 
-  const selectedIndicator = useMemo(() => {
-    return mapEnabledIndicators.find((item) => item.indicator.id === selectedIndicatorKey)
-  }, [mapEnabledIndicators, selectedIndicatorKey])
+  const { data: dashboardData, isPending: isPendingDashboard } = useQuery({
+    queryKey: ['municipio-dashboard', selectedSlug],
+    queryFn: () => getMunicipioDashboardData(selectedSlug),
+    enabled: !!selectedSlug,
+    placeholderData: (previousData) => previousData,
+  })
 
-  const indicatorGroups = useMemo(() => {
-    const groups: Record<string, { label: string; options: { key: string; label: string }[] }> =
-      {}
-
-    for (const item of mapEnabledIndicators) {
-      if (!groups[item.groupId]) {
-        groups[item.groupId] = { label: item.groupLabel, options: [] }
-      }
-      groups[item.groupId].options.push({
-        key: item.indicator.id,
-        label: item.indicator.label,
-      })
-    }
-
-    return Object.values(groups)
-  }, [mapEnabledIndicators])
-
-  const mapData = useMemo(() => {
-    if (!selectedIndicator) {
-      return {
-        dataByMunicipio: {} as Record<string, number>,
-        label: 'Indicador',
-        unit: '',
-      }
-    }
-
-    const mapSeries = getIndicatorMapSeries(
-      selectedIndicator.indicator,
-      fallbackYear,
+  // Build bundle from section data
+  const bundle = useMemo(() => {
+    const sections = Object.fromEntries(
+      Object.entries(sectionData)
+        .filter(([, section]) => section !== null)
+        .map(([id, section]) => [id, section]),
     )
 
-    const dataByMunicipio = mapSeries?.[String(selectedYear)] ?? {}
+    if (Object.keys(sections).length === 0) return null
 
     return {
-      dataByMunicipio,
-      label: `${selectedIndicator.indicator.label} (${selectedYear})`,
-      unit: selectedIndicator.indicator.unit,
+      dashboard: { lastUpdated: new Date().toISOString().slice(0, 10), kpis: [], sectionSummaries: [] },
+      sections,
+      municipiosIndex: municipioOptions.map((m) => ({ ...m, slug: m.slug, nome: m.nome, populacao: 0, area: 0, regiaoJudiciaria: '', distanciaCapital: 0, idhm: 0, lat: 0, lng: 0 })),
+      municipioDetails: {},
     }
-  }, [selectedIndicator, selectedYear])
+  }, [sectionData, municipioOptions])
 
-  if (isLoading) {
-    return (
-      <div className="animate-fade-in">
-        <div className="bg-white rounded-xl border border-areia-200 shadow-sm overflow-hidden dark:bg-[#4a5546] dark:border-white/12">
-          <div className="h-1 bg-gradient-to-r from-verde-400 via-verde-300 to-verde-400" />
-          <div className="p-6">
-            <div className="animate-pulse space-y-4">
-              <div className="h-8 bg-areia-200 rounded w-1/3" />
-              <div className="h-4 bg-areia-100 rounded w-1/4" />
-              <div className="h-[480px] bg-areia-100 rounded-xl" />
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
+  const variableOptions = useMemo(
+    () => (bundle ? getMapVariableOptions(bundle) : []),
+    [bundle],
+  )
 
-  if (mapEnabledIndicators.length === 0) {
-    return (
-      <div className="animate-fade-in">
-        <div className="bg-white rounded-xl border border-areia-200 shadow-sm overflow-hidden dark:bg-[#4a5546] dark:border-white/12">
-          <div className="h-1 bg-gradient-to-r from-verde-400 via-verde-300 to-verde-400" />
-          <div className="flex flex-col items-center justify-center py-16">
-            <Map size={48} className="text-areia-300 mb-4 dark:text-areia-600" />
-            <p className="text-sm text-areia-500 font-jakarta dark:text-areia-400">
-              Não há dados municipais disponíveis para esta seção.
-            </p>
-          </div>
-        </div>
-      </div>
-    )
-  }
+  const selectedVariable = variableOptions.find(
+    (option) => option.key === selectedVariableKey,
+  )
+
+  // Auto-select first available variable when options load
+  useEffect(() => {
+    if (variableOptions.length === 0) return
+
+    const preferred =
+      variableOptions.find((option) => option.key === selectedVariableKey) ??
+      variableOptions.find((option) => option.key === DEFAULT_MAP_VARIABLE_KEY) ??
+      variableOptions[0]
+
+    if (preferred.key !== selectedVariableKey) {
+      setSelectedVariableKey(preferred.key)
+      return
+    }
+
+    if (!preferred.years.includes(selectedYear)) {
+      setSelectedYear(preferred.years[preferred.years.length - 1] ?? 0)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedVariableKey, variableOptions])
+
+  const mapData = useMemo(
+    () =>
+      bundle
+        ? getMapVariableData(bundle, selectedVariableKey, selectedYear)
+        : {
+            dataByMunicipio: {} as Record<string, number>,
+            label: 'Indicador',
+            unit: '',
+            source: '',
+          },
+    [bundle, selectedVariableKey, selectedYear],
+  )
+
+  // Group variable options by section for <optgroup>
+  const optionsBySection = useMemo(() => {
+    const groups: Record<string, { label: string; options: typeof variableOptions }> = {}
+    for (const option of variableOptions) {
+      if (!groups[option.sectionId]) {
+        groups[option.sectionId] = { label: option.sectionLabel, options: [] }
+      }
+      groups[option.sectionId].options.push(option)
+    }
+    return Object.values(groups)
+  }, [variableOptions])
+
+  const destaques = useMemo(() => {
+    if (!dashboardData) return []
+    return dashboardData.kpis
+      .filter((k) => k.estadualValue !== undefined && k.estadualValue !== 0)
+      .map((k) => ({
+        ...k,
+        pctDiff: ((k.value - (k.estadualValue ?? 0)) / (k.estadualValue ?? 1)) * 100,
+      }))
+      .sort((a, b) => Math.abs(b.pctDiff) - Math.abs(a.pctDiff))
+      .slice(0, 3)
+  }, [dashboardData])
+
+  const isInitialLoading = isLoadingOptions || isPendingDashboard || isLoadingSections
 
   return (
-    <div className="animate-fade-in motion-reduce:animate-none">
-      <div className="bg-white rounded-xl border border-areia-200 shadow-sm overflow-hidden dark:bg-[#4a5546] dark:border-white/12">
-        <div className="h-1 bg-gradient-to-r from-verde-400 via-verde-300 to-verde-400" />
+    <>
+      {isInitialLoading && <MapaSkeleton />}
 
-        {/* Header bar */}
-        <div className="px-4 py-3 border-b border-areia-100 dark:border-white/10">
-          <div className="flex flex-col lg:flex-row lg:items-center gap-3 justify-between">
-            {/* Title */}
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-verde-600 shadow-md ring-2 ring-verde-200 dark:bg-verde-500 dark:ring-verde-800">
-                <Map size={18} className="text-white" />
-              </div>
-              {selectedIndicator && (
-                <div className="min-w-0 animate-fade-in motion-reduce:animate-none">
-                  <p className="text-[18px] font-bold text-verde-950 dark:text-white font-fraunces leading-snug truncate tracking-tight">
-                    {selectedIndicator.indicator.label}
-                  </p>
-                  <p className="text-[10px] text-areia-500 dark:text-areia-400 font-jakarta truncate">
-                    Fonte: {selectedIndicator.indicator.source}
-                  </p>
-                </div>
-              )}
-            </div>
+      {dashboardData && (
+        <div className="space-y-4">
+          {/* Top 3-column section */}
+            <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr_280px] gap-4">
+            {/* Left: Controls panel */}
+            <PainelMunicipal
+              selectedSlug={selectedSlug}
+              onChangeSlug={setSelectedSlug}
+              municipioOptions={municipioOptions}
+              showEstadual={showEstadual}
+              onToggleEstadual={setShowEstadual}
+              showSatellite={showSatellite}
+              onToggleSatellite={setShowSatellite}
+            />
 
-            {/* Controls */}
-            <div className="flex items-center gap-2 flex-wrap">
-              {/* Indicator select */}
-              <AnimatedSelect
-                value={selectedIndicatorKey}
-                onChange={(val) => {
-                  setSelectedIndicatorKey(val)
-                  const indicator = mapEnabledIndicators.find(
-                    (item) => item.indicator.id === val,
-                  )
-                  if (indicator && indicator.availableYears.length > 0) {
-                    setSelectedYear(
-                      indicator.availableYears[indicator.availableYears.length - 1],
-                    )
-                  }
-                }}
-                groups={indicatorGroups}
-                icon={<Layers size={10} />}
-                className="min-w-0 w-[240px]"
-              />
+            {/* Center: Map with indicator controls */}
+            <PainelMapa
+              selectedVariableKey={selectedVariableKey}
+              onChangeVariableKey={setSelectedVariableKey}
+              selectedYear={selectedYear}
+              onChangeYear={setSelectedYear}
+              colorScale={colorScale}
+              onChangeColorScale={handleColorScaleChange}
+              optionsBySection={optionsBySection.map((g) => ({
+                label: g.label,
+                options: g.options.map((o) => ({ key: o.key, label: o.indicatorLabel })),
+              }))}
+              selectedVariable={selectedVariable}
+              years={selectedVariable?.years ?? []}
+              mapData={mapData}
+              selectedSlug={selectedSlug}
+              onMunicipioClick={setSelectedSlug}
+              showSatellite={showSatellite}
+            />
 
-              {/* Year select */}
-              {selectedIndicator && (
-                <AnimatedSelect
-                  value={String(selectedYear)}
-                  onChange={(val) => setSelectedYear(Number(val))}
-                  groups={[
-                    {
-                      label: 'Ano',
-                      options: selectedIndicator.availableYears.map((year) => ({
-                        key: String(year),
-                        label: String(year),
-                      })),
-                    },
-                  ]}
-                  icon={<CalendarDays size={10} />}
-                  className="w-[120px]"
-                />
-              )}
-
-              {/* Palette select */}
-              <AnimatedSelect<MapColorScale>
-                value={colorScale}
-                onChange={setColorScale}
-                groups={[
-                  {
-                    label: 'Paleta',
-                    options: MAP_COLOR_SCALES.map((scale) => ({
-                      key: scale,
-                      label: MAP_COLOR_SCALE_LABELS[scale],
-                    })),
-                  },
-                ]}
-                icon={<Palette size={10} />}
-                className="w-[120px]"
-              />
-            </div>
+            {/* Right: Municipality data panel */}
+            <PainelMunicipioInfo
+              dashboardData={dashboardData}
+              destaques={destaques}
+            />
           </div>
-        </div>
 
-        {/* Map with crossfade animation */}
-        <div
-          key={`${selectedIndicatorKey}-${selectedYear}-${colorScale}`}
-          className="animate-fade-in motion-reduce:animate-none"
-        >
-          <AcreMap
-            dataByMunicipio={mapData.dataByMunicipio}
-            unit={mapData.unit}
-            label={mapData.label}
-            colorScale={colorScale}
-            height={480}
-          />
+
         </div>
-      </div>
-    </div>
+      )}
+    </>
   )
 }

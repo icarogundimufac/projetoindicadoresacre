@@ -4,15 +4,16 @@ import type { KpiData } from '@/types/dashboard'
 interface KpiLedgerRowProps {
   kpi: KpiData
   className?: string
+  index?: number
 }
 
-const SECTION_DOT: Record<string, string> = {
-  educacao: 'bg-blue-500',
-  saude: 'bg-emerald-500',
-  seguranca: 'bg-orange-500',
-  orcamento: 'bg-amber-500',
-  municipios: 'bg-purple-500',
-  default: 'bg-verde-500',
+const SECTION_BORDER: Record<string, string> = {
+  educacao: 'border-verde-500',
+  saude: 'border-ouro-500',
+  seguranca: 'border-estrela-500',
+  orcamento: 'border-verde-700',
+  municipios: 'border-areia-500',
+  default: 'border-verde-400',
 }
 
 const SECTION_LABEL: Record<string, string> = {
@@ -23,47 +24,60 @@ const SECTION_LABEL: Record<string, string> = {
   municipios: 'Municipios',
 }
 
-export function KpiLedgerRow({ kpi, className }: KpiLedgerRowProps) {
-  const dotColor = SECTION_DOT[kpi.section] ?? SECTION_DOT.default
+export function KpiLedgerRow({ kpi, className, index }: KpiLedgerRowProps) {
+  const borderColor = SECTION_BORDER[kpi.section] ?? SECTION_BORDER.default
   const sectionLabel = SECTION_LABEL[kpi.section] ?? 'Indicador'
 
   return (
     <li
       className={cn(
-        'group rounded-xl border border-areia-200/70 bg-white px-3 py-2 dark:bg-[#4a5546] dark:border-white/12',
-        'transition-all duration-150 hover:-translate-y-0.5 hover:border-areia-300 hover:shadow-sm',
+        'group rounded-lg border border-areia-200/80 bg-white overflow-hidden',
+        'transition-all duration-150 ease-out',
+        'hover:-translate-y-px hover:shadow-md hover:border-areia-300',
+        'dark:bg-[#4a5546] dark:border-white/10 dark:hover:border-white/20',
         className,
       )}
+      style={
+        index !== undefined
+          ? { animationDelay: `${index * 60}ms` }
+          : undefined
+      }
     >
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
-        <div className="min-w-0">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <div className={cn('h-2 w-2 rounded-full flex-shrink-0', dotColor)} />
-            <span
-              className="min-w-0 shrink max-w-[14rem] text-[11px] font-semibold text-verde-800 font-jakarta truncate"
+      <div className={cn('border-l-[3px] pl-3 pr-3 py-2', borderColor)}>
+        <div className="flex items-center justify-between gap-3">
+          {/* Esquerda: label + metadados */}
+          <div className="min-w-0 flex-1">
+            <p
+              className="text-[11px] font-semibold text-verde-950 font-jakarta truncate leading-tight dark:text-white"
               title={kpi.label}
             >
               {kpi.label}
-            </span>
-            <span className="rounded-md border border-areia-200 bg-areia-50 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.08em] text-areia-500 font-jakarta shrink-0">
-              {sectionLabel}
-            </span>
-            <span className="text-[10px] text-areia-400 font-jakarta tabular-nums shrink-0">
-              {kpi.year}
-            </span>
+            </p>
+            <div className="flex items-center gap-1 mt-0.5">
+              <span className="text-[9px] font-bold uppercase tracking-[0.1em] text-areia-400 font-jakarta">
+                {sectionLabel}
+              </span>
+              <span className="text-[9px] text-areia-300">·</span>
+              <span className="text-[9px] text-areia-400 font-jakarta tabular-nums">
+                {kpi.year}
+              </span>
+            </div>
           </div>
-        </div>
 
-        <div className="text-right">
-          <div className="flex items-baseline justify-end gap-1">
-            <span className="text-lg font-bold font-roboto tabular-nums text-verde-900 leading-none">
-              {typeof kpi.value === 'number'
-                ? kpi.value.toLocaleString('pt-BR')
-                : kpi.value}
-            </span>
-            {kpi.unit && (
-              <span className="text-[11px] text-areia-400 font-jakarta">{kpi.unit}</span>
-            )}
+          {/* Direita: valor hero */}
+          <div className="text-right shrink-0">
+            <div className="flex items-baseline justify-end gap-1">
+              <span className="text-[22px] font-bold font-fraunces tabular-nums text-verde-950 leading-none dark:text-white">
+                {typeof kpi.value === 'number'
+                  ? kpi.value.toLocaleString('pt-BR')
+                  : kpi.value}
+              </span>
+              {kpi.unit && (
+                <span className="text-[10px] text-areia-400 font-jakarta">
+                  {kpi.unit}
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>

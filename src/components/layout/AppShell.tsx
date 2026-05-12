@@ -16,9 +16,9 @@ export function AppShell({ children }: AppShellProps) {
         <div className="flex items-center gap-3">
           {/* Logo */}
           <img
-            src="/seplan.svg"
+            src="/seplan-branco.svg"
             alt="SEPLAN — Secretaria de Estado de Planejamento"
-            className="h-9 w-auto brightness-0 invert opacity-90 dark:brightness-100 dark:invert-0"
+            className="h-9 w-auto opacity-90"
           />
 
           <div className="hidden h-6 w-px bg-white/15 md:block dark:bg-white/12" />

@@ -10,11 +10,11 @@ function readDarkMode(): boolean {
     if (stored === 'dark') return true
     if (stored === 'light') return false
   } catch {
-    // usa a preferencia do sistema abaixo
+    // fallback para modo claro abaixo
   }
 
-  if (typeof window === 'undefined') return false
-  return window.matchMedia('(prefers-color-scheme: dark)').matches
+  // padrao: modo claro
+  return false
 }
 
 export function useThemeMode() {

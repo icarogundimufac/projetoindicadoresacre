@@ -13,19 +13,13 @@ export const NAV: NavSection[] = [
   {
     label: 'Visão Geral',
     items: [
-      { label: 'Dashboard', href: '/', icon: 'grid' },
+      { label: 'Apresentação', href: '/', icon: 'grid' },
     ],
   },
   {
     label: 'Indicadores',
     items: [
       { label: 'Indicadores', href: '/indicadores', icon: 'bar-chart' },
-    ],
-  },
-  {
-    label: 'Território',
-    items: [
-      { label: 'Municípios', href: '/municipios', icon: 'building' },
     ],
   },
 ]

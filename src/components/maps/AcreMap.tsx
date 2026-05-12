@@ -9,6 +9,7 @@ import { GeoJSON, MapContainer, TileLayer, useMap } from 'react-leaflet'
 import { queryKeys, portalDataClient } from '@/lib/data/client'
 import type { MunicipioSummary } from '@/types/municipio'
 import { generateColorScale } from '@/lib/utils/color-scale'
+import { cn } from '@/lib/utils/cn'
 import { House } from 'lucide-react'
 import { MapLegend } from './MapLegend'
 
@@ -20,6 +21,9 @@ export interface AcreMapProps {
   label?: string
   colorScale?: MapColorScale
   height?: number
+  selectedSlug?: string
+  onMunicipioClick?: (slug: string) => void
+  showSatellite?: boolean
 }
 
 export const MAP_COLOR_PALETTES: Record<MapColorScale, string[]> = {
@@ -259,6 +263,17 @@ function BindMapInstance({ onReady }: { onReady: (map: L.Map) => void }) {
   return null
 }
 
+function MapBackground({ showSatellite }: { showSatellite: boolean }) {
+  const map = useMap()
+
+  useEffect(() => {
+    const container = map.getContainer()
+    container.style.background = showSatellite ? '' : '#ffffff'
+  }, [map, showSatellite])
+
+  return null
+}
+
 function SyncMapLayout({ bounds }: { bounds: L.LatLngBounds | null }) {
   const map = useMap()
 
@@ -313,6 +328,9 @@ export function AcreMap({
   label = 'Indicador',
   colorScale = 'verde',
   height = 480,
+  selectedSlug,
+  onMunicipioClick,
+  showSatellite = true,
 }: AcreMapProps) {
   const geoJsonLayerRef = useRef<L.GeoJSON | null>(null)
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null)
@@ -355,14 +373,6 @@ export function AcreMap({
     () => buildNormalizedSlugEntries(Array.from(valueByMunicipioSlug.keys())),
     [valueByMunicipioSlug],
   )
-  const geoJsonLayerKey = useMemo(() => {
-    const valueSignature = Array.from(valueByMunicipioSlug.entries())
-      .sort(([leftSlug], [rightSlug]) => leftSlug.localeCompare(rightSlug))
-      .map(([slug, value]) => `${slug}:${value}`)
-      .join('|')
-
-    return `${label}|${unit}|${colorScale}|${valueSignature}`
-  }, [colorScale, label, unit, valueByMunicipioSlug])
   const municipioNameBySlug = useMemo(() => {
     const map = new Map<string, string>()
 
@@ -373,19 +383,37 @@ export function AcreMap({
     return map
   }, [municipios])
 
+  // Update styles without remounting the GeoJSON layer
   useEffect(() => {
+    const layer = geoJsonLayerRef.current
+    if (!layer) return
+
+    layer.eachLayer((l) => {
+      const feature = (l as L.GeoJSON).feature
+      if (feature) {
+        ;(l as L.Path).setStyle(styleFeature(feature as Feature))
+      }
+    })
     setHovered(null)
-  }, [geoJsonLayerKey])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [colorScale, label, unit, valueByMunicipioSlug, selectedSlug])
+
+  const isSelected = (feature?: Feature): boolean => {
+    if (!selectedSlug || !feature) return false
+    const slug = resolveMunicipioSlug(feature, slugEntries, municipioAliasToSlug)
+    return slug === selectedSlug
+  }
 
   const styleFeature = (feature?: Feature): PathOptions => {
     const slug = resolveMunicipioSlug(feature, slugEntries, municipioAliasToSlug)
     const value = valueByMunicipioSlug.get(slug)
+    const selected = isSelected(feature)
 
     return {
       fillColor: value !== undefined ? colorFn(value) : '#dbd5c9',
-      fillOpacity: 1,
-      color: '#f8f3e8',
-      weight: 1,
+      fillOpacity: selected ? 0.85 : 1,
+      color: selected ? '#F2C230' : '#f8f3e8',
+      weight: selected ? 3 : 1,
       opacity: 0.95,
     }
   }
@@ -409,7 +437,9 @@ export function AcreMap({
 
   return (
     <div
-      className="relative rounded-xl overflow-hidden border border-areia-200 shadow-sm bg-white"
+      className={cn(
+        'relative rounded-xl overflow-hidden border border-areia-200 shadow-sm bg-white',
+      )}
       style={{ height }}
     >
       <style>{`
@@ -423,22 +453,24 @@ export function AcreMap({
           zoom={7}
           minZoom={6}
           maxZoom={14}
-          scrollWheelZoom={false}
+          scrollWheelZoom={true}
           className="h-full w-full"
           zoomControl={false}
         >
           <BindMapInstance onReady={setMapInstance} />
-          <TileLayer
-            url={SATELLITE_TILE_URL}
-            attribution={SATELLITE_ATTRIBUTION}
-            maxZoom={18}
-          />
+          <MapBackground showSatellite={showSatellite} />
+          {showSatellite && (
+            <TileLayer
+              url={SATELLITE_TILE_URL}
+              attribution={SATELLITE_ATTRIBUTION}
+              maxZoom={18}
+            />
+          )}
           <SyncMapLayout bounds={geoJsonBounds} />
           {geoJson && (
             <>
               <FitToGeoJson geoJson={geoJson as GeoJsonObject} />
               <GeoJSON
-                key={geoJsonLayerKey}
                 ref={geoJsonLayerRef}
                 data={geoJson as GeoJsonObject}
                 style={(feature) => styleFeature(feature as Feature | undefined)}
@@ -447,6 +479,7 @@ export function AcreMap({
                   const el = pathLayer.getElement()
                   if (el) {
                     el.classList.add('acre-path')
+                    el.style.cursor = onMunicipioClick ? 'pointer' : 'default'
                   }
 
                   layer.on({
@@ -470,6 +503,13 @@ export function AcreMap({
                       geoJsonLayerRef.current?.resetStyle(event.target as Layer)
                       setHovered(null)
                     },
+                    click: () => {
+                      if (!onMunicipioClick) return
+                      const slug = resolveMunicipioSlug(feature as Feature, slugEntries, municipioAliasToSlug)
+                      if (slug) {
+                        onMunicipioClick(slug)
+                      }
+                    },
                   })
                 }}
               />
@@ -478,7 +518,7 @@ export function AcreMap({
         </MapContainer>
       )}
 
-      {!isLoading && !isError && (
+      {showSatellite && !isLoading && !isError && (
         <div className="absolute top-4 right-4 z-[500]">
           <span className="rounded-full border border-black/10 bg-white/92 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-areia-600 shadow-sm backdrop-blur-sm font-jakarta">
             Satelite: Esri

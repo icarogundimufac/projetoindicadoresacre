@@ -144,7 +144,7 @@ function HorizontalChart({
     <BarChart
       data={data}
       layout="vertical"
-      margin={{ top: 8, right: 48, bottom: 16, left: 16 }}
+      margin={{ top: 8, right: 48, bottom: 16, left: 28 }}
       barCategoryGap="18%"
     >
       <CartesianGrid stroke="#f0ede6" strokeDasharray="3 3" horizontal={false} />
@@ -161,7 +161,7 @@ function HorizontalChart({
         tick={renderCategoryTick}
         axisLine={false}
         tickLine={false}
-        width={220}
+        width={160}
         interval={0}
         tickMargin={10}
       />

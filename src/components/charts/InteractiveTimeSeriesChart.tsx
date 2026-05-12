@@ -196,7 +196,7 @@ function IndicatorDropdown({
           'border-verde-800 bg-verde-800 text-white shadow-sm',
         )}
       >
-        <BarChart3 size={13} className="text-white/80" />
+        <BarChart3 size={13} className="text-white/90" />
         <span className="flex flex-col items-start leading-none gap-0.5">
           <span className="text-[11px]">{selectedSeries.label}</span>
         </span>

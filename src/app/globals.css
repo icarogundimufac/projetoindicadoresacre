@@ -282,4 +282,22 @@ html[data-theme='light'] .text-areia-400 {
   .animation-delay-300 { animation-delay: 300ms; }
   .animation-delay-400 { animation-delay: 400ms; }
   .animation-delay-500 { animation-delay: 500ms; }
+  
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+@keyframes topoBreath {
+  0%, 100% { opacity: 0.13; }
+  50% { opacity: 0.18; }
+}
+
+@keyframes topoBreathDark {
+  0%, 100% { opacity: 0.11; }
+  50% { opacity: 0.16; }
 }

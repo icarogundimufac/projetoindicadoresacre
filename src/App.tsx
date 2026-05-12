@@ -22,14 +22,6 @@ const IndicadoresMapaRoute = lazy(() =>
 const MapasRoute = lazy(() =>
   import('@/routes/MapasRoute').then((module) => ({ default: module.MapasRoute })),
 )
-const MunicipiosRoute = lazy(() =>
-  import('@/routes/MunicipiosRoute').then((module) => ({ default: module.MunicipiosRoute })),
-)
-const MunicipioDetailRoute = lazy(() =>
-  import('@/routes/MunicipioDetailRoute').then((module) => ({
-    default: module.MunicipioDetailRoute,
-  })),
-)
 const AdminDataRoute = lazy(() =>
   import('@/routes/AdminDataRoute').then((module) => ({ default: module.AdminDataRoute })),
 )
@@ -80,8 +72,6 @@ export default function App() {
             <Route path="/seguranca" element={<SectionRedirect sectionId="seguranca" />} />
             <Route path="/orcamento" element={<SectionRedirect sectionId="orcamento" />} />
             <Route path="/mapas" element={<MapasRoute />} />
-            <Route path="/municipios" element={<MunicipiosRoute />} />
-            <Route path="/municipios/:slug" element={<MunicipioDetailRoute />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
